@@ -13,7 +13,7 @@ def check_token(f):
         If the idToken is invalid for any reason whether it's expired or revoked, a corresponding error message is returned instead and access to protected route is denied.
         """
         if "Authorization" not in request.headers:
-            return jsonify({'Error Message': 'Authorization token not provided'})
+            return jsonify({'Error Message': 'Authorization token not provided'}), 400
 
         token = request.headers['Authorization']
 

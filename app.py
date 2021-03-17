@@ -16,15 +16,28 @@ def addEvent():
     Firestore DB 'write' for creating new event in the Schedule module
     """
     # Check user access levels
-
-    # Check if form data sent from client exists
+    
+    # Decode token to obtain user's firebase id
+    token = request.headers['Authorization']
+    decoded_token = auth.verify_id_token(token)
+    
+    email = decoded_token['email']
+    uid = decoded_token['uid']
 
     # If exists, extract data from request
+    try:
+        data = request.get_json()
+        data['author'] = email
+        data['timestamp'] = firestore.SERVER_TIMESTAMP
 
-    # Try to write to Firestore DB
+        # Write to Firestore DB
+        db.collection(u'Scheduled-Events').add(data)
 
-    # Return Response 200
-    return Response(response="Event added", status=200)
+        # Return Response 201 for successfully creating a new resource
+        return Response(response="Event added", status=201)
+
+    except:
+        return Response(response="Failed to add event", status=400)
 
 
 @app.route('/deleteEvent', methods=['DELETE'])
@@ -52,6 +65,25 @@ def editEvent():
 
     return Response(response="Event edited", status=200)
 
+
+@app.route('/getEvent', methods=['GET'])
+@check_token
+def getEvent():
+    """
+    Only retrieve events created by this user
+    """
+    return Response(response="Event retrieved", status=200)
+
+
+@app.route('/getAllEvents', methods=['GET'])
+@check_token
+def getAllEvents():
+    """
+    Retrieve all upcoming and recent events
+    """
+    return Response(response="Event retrieved", status=200)
+
+
 @app.route('/grantRole')
 @check_token
 def grantRole():
@@ -76,7 +108,7 @@ def grantRole():
 
     try:
         auth.set_custom_user_claims(uid, {roles[email]: True})
-        return jsonify({"Message": "It works!!!"})
+        return Response(response="Successfully added role", status=200)
     except:
         return jsonify({"Message": "Not assigned a role"})
 
