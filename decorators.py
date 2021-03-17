@@ -12,7 +12,7 @@ def check_token(f):
         Receives idToken from the front-end and attempts to verify idToken and if successful, then access to protected route is granted.
         If the idToken is invalid for any reason whether it's expired or revoked, a corresponding error message is returned instead and access to protected route is denied.
         """
-        if 'Authorization' not in request.headers:
+        if "Authorization" not in request.headers:
             return jsonify({'Error Message': 'Authorization token not provided'})
 
         token = request.headers['Authorization']

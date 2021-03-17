@@ -9,10 +9,50 @@ firebase_app = initialize_app(cred)
 db = firestore.client()
 
 
+@app.route('/addEvent', methods=['POST'])
+@check_token
+def addEvent():
+    """
+    Firestore DB 'write' for creating new event in the Schedule module
+    """
+    # Check user access levels
+
+    # Check if form data sent from client exists
+
+    # If exists, extract data from request
+
+    # Try to write to Firestore DB
+
+    # Return Response 200
+    return Response(response="Event added", status=200)
 
 
+@app.route('/deleteEvent', methods=['DELETE'])
+@check_token
+def deleteEvent():
 
-@app.route('/grantRole', methods=['GET'])
+    # Check user access levels
+
+    # Try to get reference event document from Firestore
+
+    # Delete document
+
+    return Response(response="Event deleted", status=200)
+
+
+@app.route('/editEvent', methods=['POST'])
+@check_token
+def editEvent():
+
+    # Check user access levels
+
+    # Try to get reference to event document from Firestore
+
+    # Update document
+
+    return Response(response="Event edited", status=200)
+
+@app.route('/grantRole')
 @check_token
 def grantRole():
     """
