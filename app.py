@@ -21,13 +21,12 @@ def addEvent():
     token = request.headers['Authorization']
     decoded_token = auth.verify_id_token(token)
     
-    email = decoded_token['email']
     uid = decoded_token['uid']
 
     # If exists, extract data from request
     try:
         data = request.get_json()
-        data['author'] = email
+        data['author'] = uid
         data['timestamp'] = firestore.SERVER_TIMESTAMP
 
         # Write to Firestore DB
@@ -76,12 +75,23 @@ def getEvent():
 
 
 @app.route('/getAllEvents', methods=['GET'])
-@check_token
+#@check_token
 def getAllEvents():
     """
     Retrieve all upcoming and recent events
     """
-    return Response(response="Event retrieved", status=200)
+
+    try:
+        docs = db.collection(u'Scheduled-Events').stream()
+
+        events = []
+        for doc in docs:
+            events.append(doc.to_dict())
+        
+        return jsonify(events), 200
+
+    except:
+        return Response(response="Failed event retrieved", status=200)
 
 
 @app.route('/grantRole')
