@@ -76,9 +76,9 @@ def getEvent():
     return Response(response="Event retrieved", status=200)
 
 
-@app.route('/getAllEvents', methods=['GET'])
-#@check_token
-def getAllEvents():
+@app.route('/getRecentEvents', methods=['GET'])
+@check_token
+def getRecentEvents():
     """
     Retrieve all upcoming and recent events
     """
@@ -94,7 +94,28 @@ def getAllEvents():
         return jsonify(events), 200
 
     except:
-        return Response(response="Failed event retrieved", status=200)
+        return Response(response="Failed event retrieved", status=400)
+
+
+
+@app.route('/getNextEventPage', methods=['GET'])
+@check_token
+def getNextEventPage():
+    try:
+
+        time_stamp = request.headers['TimeStamp']
+
+        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).start_after({
+            u'timestamp': time_stamp
+        }).limit(20).stream()
+
+        events = []
+        for doc in docs:
+            events.append(doc.to_dict())
+
+        return jsonify(events), 200
+    except:
+        return Response(response="Failed event retrieved", status=400)
 
 
 @app.route('/grantRole')
