@@ -1,6 +1,7 @@
 from firebase_admin import credentials, auth, firestore, initialize_app
 from flask import Flask, Response, request, jsonify
 from functools import wraps
+from uuid import uuid4
 from decorators import check_token
 
 app = Flask(__name__)
@@ -27,6 +28,7 @@ def addEvent():
     try:
         data = request.get_json()
         data['author'] = uid
+        data['id'] = f'{uuid4()}'
         data['timestamp'] = firestore.SERVER_TIMESTAMP
 
         # Write to Firestore DB
@@ -82,7 +84,8 @@ def getAllEvents():
     """
 
     try:
-        docs = db.collection(u'Scheduled-Events').stream()
+        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).limit(20).stream()
+        
 
         events = []
         for doc in docs:
