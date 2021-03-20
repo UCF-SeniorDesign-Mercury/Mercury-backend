@@ -84,7 +84,7 @@ def getRecentEvents():
     """
 
     try:
-        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).limit(20).stream()
+        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).limit(10).stream()
         
 
         events = []
@@ -102,18 +102,20 @@ def getRecentEvents():
 @check_token
 def getNextEventPage():
     try:
-
-        time_stamp = request.headers['TimeStamp']
-
-        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).start_after({
-            u'timestamp': time_stamp
-        }).limit(20).stream()
-
+        document = []
         events = []
+
+        event_id = request.headers['ID']
+        last_ref = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()      
+        for doc in last_ref:
+            document.append(doc.to_dict())
+        
+        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).start_after(document[0]).limit(10).stream()     
         for doc in docs:
             events.append(doc.to_dict())
 
         return jsonify(events), 200
+
     except:
         return Response(response="Failed event retrieved", status=400)
 
