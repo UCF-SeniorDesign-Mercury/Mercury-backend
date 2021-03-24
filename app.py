@@ -3,6 +3,7 @@ from flask import Flask, Response, request, jsonify
 from functools import wraps
 from uuid import uuid4
 from decorators import check_token
+import ast
 
 app = Flask(__name__)
 cred = credentials.Certificate('key.json')
@@ -45,13 +46,29 @@ def addEvent():
 @check_token
 def deleteEvent():
 
-    # Check user access levels
+    
+    
+    try:
+        data = request.get_data()
+        decode_data = data.decode("UTF-8")
 
-    # Try to get reference event document from Firestore
+        # Convert bytes type to dictionary
+        new_data = ast.literal_eval(decode_data)
 
-    # Delete document
+        # Try to get reference event document from Firestore
+        event_id = new_data["id"]
+        docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
 
-    return Response(response="Event deleted", status=200)
+        # Delete document
+        for doc in docs:
+            # Store document id and use it to locate the specific document to delete
+            doc_id = doc.id
+            db.collection(u'Scheduled-Events').document(doc_id).delete()
+
+
+        return Response(response="Event deleted", status=200)
+    except:
+        return Response(response="Delete failed", status=400)
 
 
 @app.route('/editEvent', methods=['POST'])
@@ -63,8 +80,24 @@ def editEvent():
     # Try to get reference to event document from Firestore
 
     # Update document
+    try:
+        data = request.get_json()
+        event_data = data["data"]
+        event_id = event_data["id"]
 
-    return Response(response="Event edited", status=200)
+        docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        for doc in docs:
+            doc_id = doc.id
+            db.collection(u'Scheduled-Events').document(doc_id).update({
+                u'data.eventDate': event_data["eventDate"],
+                u'data.eventDescription': event_data["eventDescription"],
+                u'data.eventOrganizer': event_data["eventOrganizer"],
+                u'data.eventTitle': event_data["eventTitle"]
+            })
+
+        return Response(response="Event edited", status=200)
+    except:
+        return Response(response="Edit failed", status=400)
 
 
 @app.route('/getEvent', methods=['GET'])
@@ -101,11 +134,15 @@ def getRecentEvents():
 @app.route('/getNextEventPage', methods=['GET'])
 @check_token
 def getNextEventPage():
+    """
+    Retrieve more events for pagination. Picks off where /getRecentEvents ended
+    """
     try:
         document = []
         events = []
 
         event_id = request.headers['ID']
+        
         last_ref = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()      
         for doc in last_ref:
             document.append(doc.to_dict())
