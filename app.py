@@ -17,8 +17,7 @@ def addEvent():
     """
     Firestore DB 'write' for creating new event in the Schedule module
     """
-    # Check user access levels
-    
+    # Check user access levels   
     # Decode token to obtain user's firebase id
     token = request.headers['Authorization']
     decoded_token = auth.verify_id_token(token)
@@ -74,20 +73,19 @@ def deleteEvent():
 @app.route('/editEvent', methods=['POST'])
 @check_token
 def editEvent():
-
-    # Check user access levels
-
-    # Try to get reference to event document from Firestore
-
-    # Update document
+    
     try:
         data = request.get_json()
         event_data = data["data"]
         event_id = event_data["id"]
 
         docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+
+        # Try to get reference to event document from Firestore
         for doc in docs:
             doc_id = doc.id
+
+            # Update document
             db.collection(u'Scheduled-Events').document(doc_id).update({
                 u'data.eventDate': event_data["eventDate"],
                 u'data.eventDescription': event_data["eventDescription"],
