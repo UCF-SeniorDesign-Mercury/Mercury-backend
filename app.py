@@ -42,11 +42,8 @@ def addEvent():
 
 
 @app.route('/deleteEvent', methods=['DELETE'])
-@check_token
 def deleteEvent():
-
-    
-    
+ 
     try:
         data = request.get_data()
         decode_data = data.decode("UTF-8")
@@ -184,6 +181,98 @@ def grantRole():
         return jsonify({"Message": "Not assigned a role"})
 
 
-# 
+
+
+@app.route('/createRole', methods=['POST'])
+@check_token
+def createRole():
+    """
+    Creating a new custom role globally for the client side application
+    """
+    token = request.headers['Authorization']
+    decoded_token = auth.verify_id_token(token)
+
+    if decoded_token['admin'] is True:
+
+        data = request.get_json()["data"]
+        role = data['roleName']
+        level = data['level']
+
+        doc_ref = db.collection(u'Roles').document(u'allRoles')
+        doc_ref.set({
+            u'roles': {
+                role:level
+            }
+        }, merge=True)
+
+        doc_ref.update({u'roleArray': firestore.ArrayUnion([role])})
+        
+
+        return jsonify({"Message": "Complete"}), 200
+    else:
+        return jsonify({"Message": "Unauthorized"}), 401
+
+
+@app.route('/getAllRoles', methods=['GET'])
+@check_token
+def getAllRoles():
+    """
+    Retrieve all custom roles created by admins to the app
+    """
+    try:
+        doc = db.collection(u'Roles').document(u'allRoles').get()
+        data = doc.to_dict()['roleArray']
+        return jsonify(data)
+    except:
+        return jsonify({"Message": "Unauthorized"}), 401
+
+
+@app.route('/assignRole', methods=['POST'])
+@check_token
+def assignRole():
+    """
+    Assign a custom role to a user
+    """
+    token = request.headers['Authorization']
+    decoded_token = auth.verify_id_token(token)
+
+    if decoded_token['admin'] is True:
+
+        doc = db.collection(u'Roles').document(u'allRoles').get()
+        roles_dict = doc.to_dict()['roles']
+
+        data = request.get_json()['data']
+        email = data['email']
+        role = data['role']
+
+        level = roles_dict[role]
+
+        try:
+            user = auth.get_user_by_email(email)
+            current_custom_claims = user.custom_claims
+
+            # User has no role
+            if current_custom_claims is None:
+                auth.set_custom_user_claims(user.uid, {
+                    role: True,
+                    "accessLevel": level
+                })
+
+            # User has a role set previously
+            else:              
+                if current_custom_claims["accessLevel"] >= level:
+                    current_custom_claims[role] = True
+                else:
+                    current_custom_claims["accessLevel"] = level
+                    current_custom_claims[role] = True
+                
+                auth.set_custom_user_claims(user.uid, current_custom_claims) 
+
+            return jsonify({"Message": "Complete"}), 200
+        except:
+            return jsonify({"Message": "Email doesn't exist"}), 400
+
+
+
 if __name__ == '__main__':
     app.run(host='192.168.1.13', debug=True)

@@ -30,11 +30,7 @@ def check_token(f):
             return jsonify({'Error message': 'Token revoked'}), 403
         
         except:
-            try:
-                token = request.args.get('token')
-                auth.verify_id_token(token, check_revoked=True)
-            except:
-                return jsonify({'Error message': 'Invalid Token'}), 403
+            return jsonify({'Error message': 'Invalid Token'}), 403
 
         return f(*args, **kwargs)
     return wrap
