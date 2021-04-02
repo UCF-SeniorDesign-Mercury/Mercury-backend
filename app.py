@@ -167,12 +167,10 @@ def grantRole():
     uid = decoded_token['uid']
 
     # Reference to roles document
-    doc_ref = db.collection(u'Roles').document(u'roleList')
-    doc = doc_ref.get()
-
-    roles = {}
-    if doc.exists:
-        roles = doc.to_dict()['role']
+    doc = db.collection(u'Roles').document(u'roleList').get()
+    
+    # Get role map of predefined users to roles
+    roles = doc.to_dict()['role']
 
     try:
         auth.set_custom_user_claims(uid, {roles[email]: True})
@@ -244,14 +242,13 @@ def assignRole():
         data = request.get_json()['data']
         email = data['email']
         role = data['role']
-
         level = roles_dict[role]
 
         try:
             user = auth.get_user_by_email(email)
             current_custom_claims = user.custom_claims
 
-            # User has no role
+            # User has no previous role in their custom claims
             if current_custom_claims is None:
                 auth.set_custom_user_claims(user.uid, {
                     role: True,
