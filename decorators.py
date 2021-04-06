@@ -34,3 +34,20 @@ def check_token(f):
 
         return f(*args, **kwargs)
     return wrap
+
+
+def admin_only(f):
+    """
+    This decorator ensures that the following resource is only available to Admins
+    """
+    @wraps(f)
+    def wrap(*args, **kwargs):
+
+        token = request.headers['Authorization']
+        decoded_token = auth.verify_id_token(token)
+
+        if decoded_token['admin'] is False:
+            return jsonify({'Error message': "You don't have the access rights"})
+
+        return f(*args, **kwargs)
+    return wrap

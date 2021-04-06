@@ -2,13 +2,18 @@ from firebase_admin import credentials, auth, firestore, initialize_app
 from flask import Flask, Response, request, jsonify
 from functools import wraps
 from uuid import uuid4
-from decorators import check_token
+from decorators import check_token, admin_only
 import ast
 
 app = Flask(__name__)
 cred = credentials.Certificate('key.json')
 firebase_app = initialize_app(cred)
 db = firestore.client()
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return jsonify({'Message': "Endpoint doesn't exist"})
 
 
 @app.route('/addEvent', methods=['POST'])
@@ -183,6 +188,7 @@ def grantRole():
 
 @app.route('/createRole', methods=['POST'])
 @check_token
+@admin_only
 def createRole():
     """
     Creating a new custom role globally for the client side application
@@ -227,6 +233,7 @@ def getAllRoles():
 
 @app.route('/assignRole', methods=['POST'])
 @check_token
+@admin_only
 def assignRole():
     """
     Assign a custom role to a user
@@ -267,9 +274,51 @@ def assignRole():
 
             return jsonify({"Message": "Complete"}), 200
         except:
-            return jsonify({"Message": "Email doesn't exist"}), 400
+            return jsonify({"Error": "Email doesn't exist"}), 400
 
 
+
+@app.route('/revokeRole', methods=['POST'])
+@check_token
+@admin_only
+def revokeRole():
+    data = request.get_json()['data']
+    email = data['email']
+    role_to_remove = data['role']
+    new_level = 0
+
+    user = auth.get_user_by_email(email)
+    current_custom_claims = user.custom_claims
+    try:        
+        if current_custom_claims[role_to_remove] is True:
+            del current_custom_claims[role_to_remove]
+            all_keys = list(current_custom_claims.keys())
+            
+            # Get map of roles to level from DB
+            doc = db.collection(u'Roles').document(u'allRoles').get()
+            roles_map = doc.to_dict()['roles']
+        
+            for key in all_keys:
+                if key != "accessLevel":
+                    role_level = roles_map[key]
+
+                    # if current level status is equal to one of user's existing roles' level
+                    if role_level == current_custom_claims['accessLevel']:
+                        auth.set_custom_user_claims(user.uid, current_custom_claims)
+                        return jsonify({"Message": "Complete"})
+                    
+                    if role_level > new_level:
+                        new_level = role_level
+
+            current_custom_claims['accessLevel'] = new_level
+            auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+        return jsonify({"Message": "Complete"}), 200
+    except ValueError:
+        return jsonify({'Error': 'Specified user ID or the custom claims are invalid'})
+    except:
+        return jsonify({'Error': 'User has no role to remove'})
+    
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.13', debug=True)
+    app.run(host='192.168.1.12', debug=True)
