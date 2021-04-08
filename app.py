@@ -141,12 +141,15 @@ def getNextEventPage():
         document = []
         events = []
 
+        # Get ID of last event from client-side
         event_id = request.headers['ID']
         
+        # Get reference to document with that ID
         last_ref = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()      
         for doc in last_ref:
             document.append(doc.to_dict())
         
+        # Get the next batch of documents that come after the last document we received a reference to before
         docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).start_after(document[0]).limit(10).stream()     
         for doc in docs:
             events.append(doc.to_dict())
@@ -282,6 +285,9 @@ def assignRole():
 @check_token
 @admin_only
 def revokeRole():
+    """
+    Remove a role from a specificed user. Level is also updated if it's affected by the removal of role
+    """
     data = request.get_json()['data']
     email = data['email']
     role_to_remove = data['role']
