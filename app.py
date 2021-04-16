@@ -265,7 +265,8 @@ def assignRole():
 
     if decoded_token['admin'] is True:
 
-        doc = db.collection(u'Roles').document(u'allRoles').get()
+        doc_ref = db.collection(u'Roles').document(u'allRoles')
+        doc = doc_ref.get()
         roles_dict = doc.to_dict()['roles']
 
         data = request.get_json()['data']
@@ -283,7 +284,7 @@ def assignRole():
                     role: True,
                     "accessLevel": level
                 })
-
+                return jsonify({"Message": "Complete"}), 200
             # User has a role set previously
             else:              
                 if current_custom_claims["accessLevel"] >= level:
@@ -294,7 +295,16 @@ def assignRole():
                 
                 auth.set_custom_user_claims(user.uid, current_custom_claims) 
 
-            return jsonify({"Message": "Complete"}), 200
+               
+                # Map this new entry to roles_to_user
+                doc_ref.set({
+                    u'roles_to_user': {
+                    role: firestore.ArrayUnion([email])
+                    }
+                }, merge=True)
+                
+
+                return jsonify({"Message": "Complete"}), 200
         except:
             return jsonify({"Error": "Email doesn't exist"}), 400
 
@@ -345,7 +355,8 @@ def revokeRole():
             all_keys = list(current_custom_claims.keys())
             
             # Get map of roles to level from DB
-            doc = db.collection(u'Roles').document(u'allRoles').get()
+            doc_ref = db.collection(u'Roles').document(u'allRoles')
+            doc = doc_ref.get()
             roles_map = doc.to_dict()['roles']
         
             for key in all_keys:
@@ -362,6 +373,13 @@ def revokeRole():
 
             current_custom_claims['accessLevel'] = new_level
             auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+            # Map this new entry to roles_to_user
+            doc_ref.set({
+                u'roles_to_user': {
+                role_to_remove: firestore.ArrayRemove([email])
+                }
+            }, merge=True)
 
         return jsonify({"Message": "Complete"}), 200
     except ValueError:
