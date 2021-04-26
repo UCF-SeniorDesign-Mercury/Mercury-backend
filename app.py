@@ -23,6 +23,9 @@ def page_not_found(e):
 def addEvent():
     """
     Firestore DB 'write' for creating new event in the Schedule module
+
+    Returns:
+        Response of 201 for successfully adding event to DB
     """
     # Check user access levels   
     # Decode token to obtain user's firebase id
@@ -50,6 +53,12 @@ def addEvent():
 
 @app.route('/deleteEvent', methods=['DELETE'])
 def deleteEvent():
+    """
+    Firestore DB 'delete' for removing an event in the Schedule module
+
+    Returns:
+        Response of 200 for successfully removing specified event to delete in DB
+    """
  
     try:
         data = request.get_data()
@@ -77,7 +86,12 @@ def deleteEvent():
 @app.route('/editEvent', methods=['POST'])
 @check_token
 def editEvent():
-    
+    """
+    Firestore DB 'write' for updating a current event in the Schedule module
+
+    Returns:
+        Response of 200 for successfully editing the specified event 
+    """
     try:
         data = request.get_json()
         event_data = data["data"]
@@ -105,6 +119,12 @@ def editEvent():
 @app.route('/getEvent', methods=['GET'])
 @check_token
 def getEvent():
+    """
+    Firestore DB 'read' for specified event in the Schedule module
+
+    Returns:
+        An event of the specified event id passed from client side
+    """
     event_id = request.args.get('event')
     event = []
 
@@ -122,7 +142,10 @@ def getEvent():
 @check_token
 def getRecentEvents():
     """
-    Retrieve all upcoming and recent events
+    Retrieve the latest initial upcoming and recent events
+
+    Returns:
+        Jsonified list of the latest 10 events from Firestore DB
     """
 
     try:
@@ -144,7 +167,10 @@ def getRecentEvents():
 @check_token
 def getNextEventPage():
     """
-    Retrieve more events for pagination. Picks off where /getRecentEvents ended
+    Retrieves the next page of latest events for pagination. Picks off where /getRecentEvents ended
+
+    Returns;
+        Jsonified list of the next latest 10 events from Firestore DB
     """
     try:
         document = []
@@ -173,7 +199,10 @@ def getNextEventPage():
 @check_token
 def grantRole():
     """
-    Upon newly registering a user, they are granted a role if their email used is matched to one in the database. 
+    Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
+
+    Returns: 
+        Response of 200 of successfully adding role to user
     """
 
     # Decode token to obtain user's firebase id
@@ -214,6 +243,9 @@ def grantRole():
 def createRole():
     """
     Creating a new custom role globally for the client side application
+
+    Returns:
+        Returns 200
     """
     token = request.headers['Authorization']
     decoded_token = auth.verify_id_token(token)
@@ -243,7 +275,10 @@ def createRole():
 @check_token
 def getAllRoles():
     """
-    Retrieve all custom roles created by admins to the app
+    Retrieve all custom roles created by admins in /createRole to the app
+
+    Returns:
+        Array of custom roles created by admins
     """
     try:
         doc = db.collection(u'Roles').document(u'allRoles').get()
@@ -258,7 +293,10 @@ def getAllRoles():
 @admin_only
 def assignRole():
     """
-    Assign a custom role to a user
+    Assigns a custom role to a user and updates their level access accordingly
+
+    Returns:
+        Success response of 200
     """
     token = request.headers['Authorization']
     decoded_token = auth.verify_id_token(token)
@@ -313,6 +351,12 @@ def assignRole():
 @app.route('/inviteRole', methods=['POST'])
 @check_token
 def inviteRole():
+    """
+    For inviting users with specified roles to an event. Users with the selected role will be emailed a link that opens up to the invited event
+
+    Returns;
+        Response of 200
+    """
     data = request.get_json()['data']
     role = data['role']
     event_id = data['event_id']
@@ -341,6 +385,9 @@ def inviteRole():
 def revokeRole():
     """
     Remove a role from a specificed user. Level is also updated if it's affected by the removal of role
+
+    Returns:
+        Response of 200 for successfully removing role from DB
     """
     data = request.get_json()['data']
     email = data['email']
