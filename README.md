@@ -50,7 +50,11 @@ python app.py
 ```
 
 ## Additional Setup
+
+**For sending email in /inviteRole**
 For testing locally, you will have to change the host IP in app.py (line 392) to your PC's static ip. You will have to do some custom adjustments in helpers.py as well.
 Refer to this [video](https://www.youtube.com/watch?v=Bg9r_yLk7VY&list=LL&index=62&t=601s&ab_channel=DevEd) for what to fill in for the send emails in helpers.py.
 
+**Firebase project**
+Replace the key.json with your own from Firebase.
 
