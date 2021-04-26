@@ -112,6 +112,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# Custom
-key.json
