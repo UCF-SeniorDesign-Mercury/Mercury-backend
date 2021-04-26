@@ -2,8 +2,10 @@ from firebase_admin import credentials, auth, firestore, initialize_app
 from flask import Flask, Response, request, jsonify
 from functools import wraps
 from uuid import uuid4
-from decorators import check_token, admin_only
 import ast
+
+from decorators import check_token, admin_only
+from helpers import send_invite_email
 
 app = Flask(__name__)
 cred = credentials.Certificate('key.json')
@@ -103,10 +105,17 @@ def editEvent():
 @app.route('/getEvent', methods=['GET'])
 @check_token
 def getEvent():
-    """
-    Only retrieve events created by this user
-    """
-    return Response(response="Event retrieved", status=200)
+    event_id = request.args.get('event')
+    event = []
+
+    try:
+        doc = db.collection(u'Scheduled-Events').document(event_id).get()
+        if doc.exists:
+            return jsonify(doc.to_dict()), 200
+
+        return Response(response="Event no longer exist", status=400)
+    except:
+        return Response(response="Failed to retrieve", status=400)
 
 
 @app.route('/getRecentEvents', methods=['GET'])
@@ -179,9 +188,19 @@ def grantRole():
     
     # Get role map of predefined users to roles
     roles = doc.to_dict()['role']
+    role_to_assign = roles[email]
 
     try:
-        auth.set_custom_user_claims(uid, {roles[email]: True})
+        auth.set_custom_user_claims(uid, {role_to_assign: True})
+
+        # Map this new entry to roles_to_user
+        doc_allRoles = db.collection(u'Roles').document(u'allRoles')
+        doc_allRoles.set({
+            u'roles_to_user': {
+                role_to_assign: firestore.ArrayUnion([email])
+            }
+        }, merge=True)
+
         return Response(response="Successfully added role", status=200)
     except:
         return jsonify({"Message": "Not assigned a role"})
@@ -246,7 +265,8 @@ def assignRole():
 
     if decoded_token['admin'] is True:
 
-        doc = db.collection(u'Roles').document(u'allRoles').get()
+        doc_ref = db.collection(u'Roles').document(u'allRoles')
+        doc = doc_ref.get()
         roles_dict = doc.to_dict()['roles']
 
         data = request.get_json()['data']
@@ -264,7 +284,7 @@ def assignRole():
                     role: True,
                     "accessLevel": level
                 })
-
+                return jsonify({"Message": "Complete"}), 200
             # User has a role set previously
             else:              
                 if current_custom_claims["accessLevel"] >= level:
@@ -275,9 +295,43 @@ def assignRole():
                 
                 auth.set_custom_user_claims(user.uid, current_custom_claims) 
 
-            return jsonify({"Message": "Complete"}), 200
+               
+                # Map this new entry to roles_to_user
+                doc_ref.set({
+                    u'roles_to_user': {
+                    role: firestore.ArrayUnion([email])
+                    }
+                }, merge=True)
+                
+
+                return jsonify({"Message": "Complete"}), 200
         except:
             return jsonify({"Error": "Email doesn't exist"}), 400
+
+
+
+@app.route('/inviteRole', methods=['POST'])
+@check_token
+def inviteRole():
+    data = request.get_json()['data']
+    role = data['role']
+    event_id = data['event_id']
+    
+    # Retrieve map of roles to user from DB
+    role_docs = db.collection(u'Roles').document(u'allRoles').get()
+    roles_to_user = role_docs.to_dict()['roles_to_user']
+
+    # Retrieve list of emails that have a specific from the map
+    emails = roles_to_user[role]
+
+    event_docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+    for doc in event_docs:
+        doc_id = doc.id
+        send_invite_email(emails, doc_id)
+
+
+    return jsonify({"Message": "Complete"}), 200
+
 
 
 
@@ -301,7 +355,8 @@ def revokeRole():
             all_keys = list(current_custom_claims.keys())
             
             # Get map of roles to level from DB
-            doc = db.collection(u'Roles').document(u'allRoles').get()
+            doc_ref = db.collection(u'Roles').document(u'allRoles')
+            doc = doc_ref.get()
             roles_map = doc.to_dict()['roles']
         
             for key in all_keys:
@@ -318,6 +373,13 @@ def revokeRole():
 
             current_custom_claims['accessLevel'] = new_level
             auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+            # Map this new entry to roles_to_user
+            doc_ref.set({
+                u'roles_to_user': {
+                role_to_remove: firestore.ArrayRemove([email])
+                }
+            }, merge=True)
 
         return jsonify({"Message": "Complete"}), 200
     except ValueError:
