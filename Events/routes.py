@@ -6,28 +6,28 @@ import ast
 from decorators import check_token
 from app import db
 
-events = Blueprint('events', __name__)
+events: Blueprint = Blueprint('events', __name__)
 
 
 @events.route('/addEvent', methods=['POST'])
 @check_token
-def addEvent():
+def addEvent() -> Response:
     """
     Firestore DB 'write' for creating new event in the Schedule module
 
     Returns:
         Response of 201 for successfully adding event to DB
     """
-    # Check user access levels   
+    # Check user access levels
     # Decode token to obtain user's firebase id
-    token = request.headers['Authorization']
-    decoded_token = auth.verify_id_token(token)
-    
-    uid = decoded_token['uid']
+    token: str = request.headers['Authorization']
+    decoded_token: dict = auth.verify_id_token(token)
+
+    uid: str = decoded_token['uid']
 
     # If exists, extract data from request
     try:
-        data = request.get_json()
+        data: dict = request.get_json()
         data['author'] = uid
         data['id'] = f'{uuid4()}'
         data['timestamp'] = firestore.SERVER_TIMESTAMP
@@ -43,31 +43,31 @@ def addEvent():
 
 
 @events.route('/deleteEvent', methods=['DELETE'])
-def deleteEvent():
+def deleteEvent() -> Response:
     """
     Firestore DB 'delete' for removing an event in the Schedule module
 
     Returns:
         Response of 200 for successfully removing specified event to delete in DB
     """
- 
+
     try:
-        data = request.get_data()
-        decode_data = data.decode("UTF-8")
+        data: bytes = request.get_data()
+        decode_data: str = data.decode("UTF-8")
 
         # Convert bytes type to dictionary
         new_data = ast.literal_eval(decode_data)
 
         # Try to get reference event document from Firestore
-        event_id = new_data["id"]
-        docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        event_id: str = new_data["id"]
+        docs = db.collection(
+            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
 
         # Delete document
         for doc in docs:
             # Store document id and use it to locate the specific document to delete
             doc_id = doc.id
             db.collection(u'Scheduled-Events').document(doc_id).delete()
-
 
         return Response(response="Event deleted", status=200)
     except:
@@ -76,7 +76,7 @@ def deleteEvent():
 
 @events.route('/editEvent', methods=['POST'])
 @check_token
-def editEvent():
+def editEvent() -> Response:
     """
     Firestore DB 'write' for updating a current event in the Schedule module
 
@@ -84,11 +84,12 @@ def editEvent():
         Response of 200 for successfully editing the specified event 
     """
     try:
-        data = request.get_json()
-        event_data = data["data"]
-        event_id = event_data["id"]
+        data: dict = request.get_json()
+        event_data: dict = data["data"]
+        event_id: str = event_data["id"]
 
-        docs = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        docs: list = db.collection(
+            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
 
         # Try to get reference to event document from Firestore
         for doc in docs:
@@ -109,7 +110,7 @@ def editEvent():
 
 @events.route('/getEvent', methods=['GET'])
 @check_token
-def getEvent():
+def getEvent() -> Response:
     """
     Firestore DB 'read' for specified event in the Schedule module
 
@@ -117,7 +118,7 @@ def getEvent():
         An event of the specified event id passed from client side
     """
     event_id = request.args.get('event')
-    event = []
+    event: list = []
 
     try:
         doc = db.collection(u'Scheduled-Events').document(event_id).get()
@@ -131,7 +132,7 @@ def getEvent():
 
 @events.route('/getRecentEvents', methods=['GET'])
 @check_token
-def getRecentEvents():
+def getRecentEvents() -> Response:
     """
     Retrieve the latest initial upcoming and recent events
 
@@ -140,23 +141,22 @@ def getRecentEvents():
     """
 
     try:
-        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).limit(10).stream()
-        
+        docs: list = db.collection(u'Scheduled-Events').order_by(u'timestamp',
+                                                                 direction=firestore.Query.DESCENDING).limit(10).stream()
 
-        events = []
+        events: list = []
         for doc in docs:
             events.append(doc.to_dict())
-        
+
         return jsonify(events), 200
 
     except:
         return Response(response="Failed event retrieved", status=400)
 
 
-
 @events.route('/getNextEventPage', methods=['GET'])
 @check_token
-def getNextEventPage():
+def getNextEventPage() -> Response:
     """
     Retrieves the next page of latest events for pagination. Picks off where /getRecentEvents ended
 
@@ -164,19 +164,21 @@ def getNextEventPage():
         Jsonified list of the next latest 10 events from Firestore DB
     """
     try:
-        document = []
-        events = []
+        document: list = []
+        events: list = []
 
         # Get ID of last event from client-side
-        event_id = request.headers['ID']
-        
+        event_id: str = request.headers['ID']
+
         # Get reference to document with that ID
-        last_ref = db.collection(u'Scheduled-Events').where(u'id', u'==', event_id).stream()      
+        last_ref = db.collection(
+            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
         for doc in last_ref:
             document.append(doc.to_dict())
-        
+
         # Get the next batch of documents that come after the last document we received a reference to before
-        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp', direction=firestore.Query.DESCENDING).start_after(document[0]).limit(10).stream()     
+        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp',
+                                                           direction=firestore.Query.DESCENDING).start_after(document[0]).limit(10).stream()
         for doc in docs:
             events.append(doc.to_dict())
 
