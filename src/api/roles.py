@@ -3,9 +3,9 @@ from firebase_admin import auth, firestore
 from firebase_admin.auth import UserRecord
 from flask import Blueprint, Response, jsonify, request
 
-from decorators import check_token, admin_only
-from helpers import send_invite_email
-from app import db
+from common.decorators import check_token, admin_only
+from common.helpers import send_invite_email
+from common.database import db
 
 roles: Blueprint = Blueprint('roles', __name__)
 

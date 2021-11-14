@@ -1,14 +1,9 @@
 from flask.wrappers import Response
-from Roles.routes import roles
-from Events.routes import events
-from firebase_admin import credentials, firestore, initialize_app
+from api.roles import roles
+from api.events import events
 from flask import Flask, jsonify
 
-
 app = Flask(__name__)
-cred = credentials.Certificate('key.json')
-firebase_app = initialize_app(cred)
-db = firestore.client()
 
 
 app.register_blueprint(events)
@@ -21,4 +16,4 @@ def page_not_found(e) -> Response:
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.12', debug=True)
+    app.run(host='127.0.0.1', debug=True)

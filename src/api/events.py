@@ -3,8 +3,8 @@ from flask import Blueprint, Response, jsonify, request
 from uuid import uuid4
 import ast
 
-from decorators import check_token
-from app import db
+from common.database import db
+from common.decorators import check_token
 
 events: Blueprint = Blueprint('events', __name__)
 
