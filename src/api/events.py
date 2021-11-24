@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*
+"""
+    api.events
+    ~~~~~~~~~~~~~~
+    Functions:
+        create_event()
+        update_event()
+        get_all_events()
+    Variables:
+        EVENT_FIELDS
+"""
 from firebase_admin import auth, firestore
 from flask import Blueprint, Response, jsonify, request
 from uuid import uuid4
@@ -9,14 +20,20 @@ from common.decorators import check_token
 events: Blueprint = Blueprint('events', __name__)
 
 
-@events.route('/addEvent', methods=['POST'])
+@events.route('/add_event', methods=['POST'])
 @check_token
-def addEvent() -> Response:
+def add_event() -> Response:
     """
-    Firestore DB 'write' for creating new event in the Schedule module
-
-    Returns:
-        Response of 201 for successfully adding event to DB
+    Creates an event.
+    ---
+    tags:
+        - event
+    Summary: Creates event
+    responses:
+        201:
+            description: Event created
+        400:
+            description: Failed to add an event
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -42,8 +59,8 @@ def addEvent() -> Response:
         return Response(response="Failed to add event", status=400)
 
 
-@events.route('/deleteEvent', methods=['DELETE'])
-def deleteEvent() -> Response:
+@events.route('/delete_event', methods=['DELETE'])
+def delete_event() -> Response:
     """
     Firestore DB 'delete' for removing an event in the Schedule module
 
@@ -74,9 +91,9 @@ def deleteEvent() -> Response:
         return Response(response="Delete failed", status=400)
 
 
-@events.route('/editEvent', methods=['POST'])
+@events.route('/update_event', methods=['POST'])
 @check_token
-def editEvent() -> Response:
+def update_event() -> Response:
     """
     Firestore DB 'write' for updating a current event in the Schedule module
 
@@ -108,9 +125,9 @@ def editEvent() -> Response:
         return Response(response="Edit failed", status=400)
 
 
-@events.route('/getEvent', methods=['GET'])
+@events.route('/get_event', methods=['GET'])
 @check_token
-def getEvent() -> Response:
+def get_event() -> Response:
     """
     Firestore DB 'read' for specified event in the Schedule module
 
@@ -130,9 +147,9 @@ def getEvent() -> Response:
         return Response(response="Failed to retrieve", status=400)
 
 
-@events.route('/getRecentEvents', methods=['GET'])
+@events.route('/get_recent_events', methods=['GET'])
 @check_token
-def getRecentEvents() -> Response:
+def get_recent_events() -> Response:
     """
     Retrieve the latest initial upcoming and recent events
 
@@ -154,9 +171,9 @@ def getRecentEvents() -> Response:
         return Response(response="Failed event retrieved", status=400)
 
 
-@events.route('/getNextEventPage', methods=['GET'])
+@events.route('/get_next_event_page', methods=['GET'])
 @check_token
-def getNextEventPage() -> Response:
+def get_next_event_page() -> Response:
     """
     Retrieves the next page of latest events for pagination. Picks off where /getRecentEvents ended
 
