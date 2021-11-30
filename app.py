@@ -1,10 +1,18 @@
 from flask.wrappers import Response
-from api.roles import roles
-from api.events import events
+from src.api.roles import roles
+from src.api.events import events
+from src.api.files import files
 from flask import Flask, jsonify
 from flasgger import Swagger
+from os import path
+import yaml
 
 app = Flask(__name__)
+
+schemapath = path.join(path.abspath(path.dirname(__file__)), "src/schemas.yml")
+schemastream = open(schemapath, "r")
+schema = yaml.load(schemastream, Loader=yaml.FullLoader)
+schemastream.close()
 
 swagger_specs = {
     "openapi": "3.0.3",
@@ -27,12 +35,16 @@ swagger_specs = {
     "schemes": [
         "http",
         "https"
-    ]
+    ],
+    "components": {
+        "schemas": schema,
+    }
 }
 swagger = Swagger(app, template=swagger_specs)
 
 app.register_blueprint(events)
 app.register_blueprint(roles)
+app.register_blueprint(files)
 
 
 @app.errorhandler(404)

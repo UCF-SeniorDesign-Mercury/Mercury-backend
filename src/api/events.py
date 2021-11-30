@@ -1,34 +1,43 @@
 # -*- coding: utf-8 -*
 """
-    api.events
+    src.api.events
     ~~~~~~~~~~~~~~
     Functions:
         create_event()
         update_event()
         get_all_events()
-    Variables:
-        EVENT_FIELDS
+        get_event()
+        get_recent_events()
+        get_next_event_page()
 """
 from firebase_admin import auth, firestore
-from flask import Blueprint, Response, jsonify, request
+from flask import Response, jsonify, request
 from uuid import uuid4
 import ast
 
-from common.database import db
-from common.decorators import check_token
+from src.api import Blueprint
+from src.common.database import db
+from src.common.decorators import check_token
 
 events: Blueprint = Blueprint('events', __name__)
 
 
-@events.route('/add_event', methods=['POST'])
+@events.post('/create_event')
 @check_token
-def add_event() -> Response:
+def create_event() -> Response:
     """
     Creates an event.
     ---
     tags:
         - event
-    Summary: Creates event
+    summary: Creates event
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/Event'
+        description: Created event object
+        required: true
     responses:
         201:
             description: Event created
@@ -59,7 +68,7 @@ def add_event() -> Response:
         return Response(response="Failed to add event", status=400)
 
 
-@events.route('/delete_event', methods=['DELETE'])
+@events.delete('/delete_event')
 def delete_event() -> Response:
     """
     Firestore DB 'delete' for removing an event in the Schedule module
@@ -91,7 +100,7 @@ def delete_event() -> Response:
         return Response(response="Delete failed", status=400)
 
 
-@events.route('/update_event', methods=['POST'])
+@events.post('/update_event')
 @check_token
 def update_event() -> Response:
     """
@@ -125,7 +134,7 @@ def update_event() -> Response:
         return Response(response="Edit failed", status=400)
 
 
-@events.route('/get_event', methods=['GET'])
+@events.get('/get_event')
 @check_token
 def get_event() -> Response:
     """
@@ -147,7 +156,7 @@ def get_event() -> Response:
         return Response(response="Failed to retrieve", status=400)
 
 
-@events.route('/get_recent_events', methods=['GET'])
+@events.get('/get_recent_events')
 @check_token
 def get_recent_events() -> Response:
     """
@@ -171,7 +180,7 @@ def get_recent_events() -> Response:
         return Response(response="Failed event retrieved", status=400)
 
 
-@events.route('/get_next_event_page', methods=['GET'])
+@events.get('/get_next_event_page')
 @check_token
 def get_next_event_page() -> Response:
     """

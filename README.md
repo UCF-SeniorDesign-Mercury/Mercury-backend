@@ -46,7 +46,7 @@ pip3 install -r requirements.txt
 
 **Running the application**
 ```
-python src/app.py
+python app.py
 ```
 
 ## Documentation

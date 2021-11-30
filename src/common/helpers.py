@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*
+"""
+    src.common.helpers
+    ~~~~~~~~~~~~~~~~~~
+    Functions:
+        send_invite_email()
+"""
 from smtplib import SMTP
 import os
 

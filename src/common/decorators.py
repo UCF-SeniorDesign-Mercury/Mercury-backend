@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*
+"""
+    src.common.decorators
+    ~~~~~~~~~~~~~~~~~~~~~
+    Functions:
+        check_token()
+        admin_only()
+"""
 from functools import wraps
 from flask import json, request, jsonify
 from firebase_admin import auth
