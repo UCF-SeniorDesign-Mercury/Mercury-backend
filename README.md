@@ -1,6 +1,6 @@
 # Mercury Backend
 
-This backend is created using flask and is still in development and for local testing. 
+This backend is created using Flask and is still in development and for local testing. 
 
 ## Setup
 **Installing virtual environment**
@@ -9,7 +9,7 @@ On macOS and Linux
 ```
 python3 -m pip install --user virtualenv
 ```
- 
+
 on Windows
 ```
 py -m pip install --user virtualenv
@@ -48,6 +48,10 @@ pip3 install -r requirements.txt
 ```
 python app.py
 ```
+
+## Documentation
+
+To see the documentation for the API, you need to run the application and go to `http://localhost:5000/apidocs/`. There you will see a Swagger UI, which provides all documentation and an opportunity to test some of the endpoints.
 
 ## Additional Setup
 

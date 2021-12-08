@@ -1,22 +1,48 @@
+# -*- coding: utf-8 -*
+"""
+    src.api.events
+    ~~~~~~~~~~~~~~
+    Functions:
+        create_event()
+        update_event()
+        get_all_events()
+        get_event()
+        get_recent_events()
+        get_next_event_page()
+"""
 from firebase_admin import auth, firestore
-from flask import Blueprint, Response, jsonify, request
+from flask import Response, jsonify, request
 from uuid import uuid4
 import ast
 
-from common.database import db
-from common.decorators import check_token
+from src.api import Blueprint
+from src.common.database import db
+from src.common.decorators import check_token
 
 events: Blueprint = Blueprint('events', __name__)
 
 
-@events.route('/addEvent', methods=['POST'])
+@events.post('/create_event')
 @check_token
-def addEvent() -> Response:
+def create_event() -> Response:
     """
-    Firestore DB 'write' for creating new event in the Schedule module
-
-    Returns:
-        Response of 201 for successfully adding event to DB
+    Creates an event.
+    ---
+    tags:
+        - event
+    summary: Creates event
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/Event'
+        description: Created event object
+        required: true
+    responses:
+        201:
+            description: Event created
+        400:
+            description: Failed to add an event
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -42,8 +68,8 @@ def addEvent() -> Response:
         return Response(response="Failed to add event", status=400)
 
 
-@events.route('/deleteEvent', methods=['DELETE'])
-def deleteEvent() -> Response:
+@events.delete('/delete_event')
+def delete_event() -> Response:
     """
     Firestore DB 'delete' for removing an event in the Schedule module
 
@@ -74,9 +100,9 @@ def deleteEvent() -> Response:
         return Response(response="Delete failed", status=400)
 
 
-@events.route('/editEvent', methods=['POST'])
+@events.post('/update_event')
 @check_token
-def editEvent() -> Response:
+def update_event() -> Response:
     """
     Firestore DB 'write' for updating a current event in the Schedule module
 
@@ -108,9 +134,9 @@ def editEvent() -> Response:
         return Response(response="Edit failed", status=400)
 
 
-@events.route('/getEvent', methods=['GET'])
+@events.get('/get_event')
 @check_token
-def getEvent() -> Response:
+def get_event() -> Response:
     """
     Firestore DB 'read' for specified event in the Schedule module
 
@@ -130,9 +156,9 @@ def getEvent() -> Response:
         return Response(response="Failed to retrieve", status=400)
 
 
-@events.route('/getRecentEvents', methods=['GET'])
+@events.get('/get_recent_events')
 @check_token
-def getRecentEvents() -> Response:
+def get_recent_events() -> Response:
     """
     Retrieve the latest initial upcoming and recent events
 
@@ -154,9 +180,9 @@ def getRecentEvents() -> Response:
         return Response(response="Failed event retrieved", status=400)
 
 
-@events.route('/getNextEventPage', methods=['GET'])
+@events.get('/get_next_event_page')
 @check_token
-def getNextEventPage() -> Response:
+def get_next_event_page() -> Response:
     """
     Retrieves the next page of latest events for pagination. Picks off where /getRecentEvents ended
 

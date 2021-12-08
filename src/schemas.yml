@@ -1,0 +1,17 @@
+Event:
+  id: Event
+  type: object
+  properties:
+    eventTitle:
+      type: string
+      example: Coffee meeting
+    eventOrganizer:
+      type: string
+      example: Your employer
+    eventDate:
+      type: string
+      format: date
+      example: YYYY-MM-DD
+    eventDescription:
+      type: string
+      example: Drink coffee with your teammates

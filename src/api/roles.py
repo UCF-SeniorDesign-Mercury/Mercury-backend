@@ -1,18 +1,31 @@
+# -*- coding: utf-8 -*
+"""
+    src.api.roles
+    ~~~~~~~~~~~~~
+    Functions:
+        grant_role()
+        create_role()
+        get_all_roles()
+        assign_role()
+        invite_role()
+        revoke_role()
+"""
 from ast import Num
 from firebase_admin import auth, firestore
 from firebase_admin.auth import UserRecord
-from flask import Blueprint, Response, jsonify, request
+from flask import Response, jsonify, request
 
-from common.decorators import check_token, admin_only
-from common.helpers import send_invite_email
-from common.database import db
+from src.api import Blueprint
+from src.common.decorators import check_token, admin_only
+from src.common.helpers import send_invite_email
+from src.common.database import db
 
 roles: Blueprint = Blueprint('roles', __name__)
 
 
-@roles.route('/grantRole')
+@roles.route('/grant_role')
 @check_token
-def grantRole() -> Response:
+def grant_role() -> Response:
     """
     Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
 
@@ -50,10 +63,10 @@ def grantRole() -> Response:
         return jsonify({"Message": "Not assigned a role"})
 
 
-@roles.route('/createRole', methods=['POST'])
+@roles.post('/create_role')
 @check_token
 @admin_only
-def createRole() -> Response:
+def create_role() -> Response:
     """
     Creating a new custom role globally for the client side application
 
@@ -83,9 +96,9 @@ def createRole() -> Response:
         return jsonify({"Message": "Unauthorized"}), 401
 
 
-@roles.route('/getAllRoles', methods=['GET'])
+@roles.get('/get_all_roles')
 @check_token
-def getAllRoles() -> Response:
+def get_all_roles() -> Response:
     """
     Retrieve all custom roles created by admins in /createRole to the app
 
@@ -100,10 +113,10 @@ def getAllRoles() -> Response:
         return jsonify({"Message": "Unauthorized"}), 401
 
 
-@roles.route('/assignRole', methods=['POST'])
+@roles.post('/assign_role')
 @check_token
 @admin_only
-def assignRole() -> Response:
+def assign_role() -> Response:
     """
     Assigns a custom role to a user and updates their level access accordingly
 
@@ -157,9 +170,9 @@ def assignRole() -> Response:
             return jsonify({"Error": "Email doesn't exist"}), 400
 
 
-@roles.route('/inviteRole', methods=['POST'])
+@roles.post('/invite_role')
 @check_token
-def inviteRole() -> Response:
+def invite_role() -> Response:
     """
     For inviting users with specified roles to an event. Users with the selected role will be emailed a link that opens up to the invited event
 
@@ -186,10 +199,10 @@ def inviteRole() -> Response:
     return jsonify({"Message": "Complete"}), 200
 
 
-@roles.route('/revokeRole', methods=['POST'])
+@roles.post('/revoke_role')
 @check_token
 @admin_only
-def revokeRole() -> Response:
+def revoke_role() -> Response:
     """
     Remove a role from a specificed user. Level is also updated if it's affected by the removal of role
 
