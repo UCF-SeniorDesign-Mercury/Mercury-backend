@@ -46,7 +46,7 @@ pip3 install -r requirements.txt
 
 **Running the application**
 ```
-python app.py
+python -m src run
 ```
 
 ## Documentation
@@ -60,5 +60,5 @@ For testing locally, you will have to change the host IP in app.py (line 392) to
 Refer to this [video](https://www.youtube.com/watch?v=Bg9r_yLk7VY&list=LL&index=62&t=601s&ab_channel=DevEd) for what to fill in for the send emails in helpers.py.
 
 **Firebase project**
-Replace the key.json with your own from Firebase.
+Add keys from `key.json` to the `.env` file.
 
