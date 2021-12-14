@@ -1,15 +1,26 @@
+# -*- coding: utf-8 -*-
+"""
+    src.__main__
+    ~~~~~~~~~~~~
+    Handles arguments from the cli and runs the app.
+    Functions:
+        page_not_found()
+"""
 from flask.wrappers import Response
 from src.api.roles import roles
 from src.api.events import events
 from src.api.files import files
 from flask import Flask, jsonify
 from flasgger import Swagger
-from os import path
+from os import path, environ
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-schemapath = path.join(path.abspath(path.dirname(__file__)), "src/schemas.yml")
+schemapath = path.join(path.abspath(path.dirname(__file__)), "schemas.yml")
 schemastream = open(schemapath, "r")
 schema = yaml.load(schemastream, Loader=yaml.FullLoader)
 schemastream.close()
@@ -53,4 +64,4 @@ def page_not_found(e) -> Response:
 
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=int(environ.get("PORT", 8080)), debug=True)
