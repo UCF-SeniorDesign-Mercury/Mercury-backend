@@ -2,6 +2,22 @@ Event:
   id: Event
   type: object
   properties:
+    id:
+      type: string
+      example: this is the event id
+    author:
+      type: string
+      example: this is the author uid
+    data:
+      $ref: "#/components/schemas/EventData"
+    timestamp:
+      type: string
+      example: 2021/04/17 UTC-4 18:16:00
+
+EventData:
+  id: Event Data
+  type: object
+  properties:
     eventTitle:
       type: string
       example: Coffee meeting
