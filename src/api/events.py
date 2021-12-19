@@ -68,26 +68,31 @@ def create_event() -> Response:
         return Response(response="Failed to add event", status=400)
 
 
-@events.delete('/delete_event')
-def delete_event() -> Response:
+@events.delete('/delete_event/<event_id>')
+def delete_event(event_id: str) -> Response:
     """
-    Firestore DB 'delete' for removing an event in the Schedule module
+    Delete an event from Firebase.
+    ---
+    tags:
+        - event
+    summary: Deletes an event
+    
+    responses:
+        200:
+            description: File deleted
+        404:
+            description: Delete failed
+    """
+    # Check user access levels
+    # Decode token to obtain user's firebase id
+    token: str = request.headers['Authorization']
+    decoded_token: dict = auth.verify_id_token(token)
 
-    Returns:
-        Response of 200 for successfully removing specified event to delete in DB
-    """
+    uid: str = decoded_token['uid']
 
     try:
-        data: bytes = request.get_data()
-        decode_data: str = data.decode("UTF-8")
-
-        # Convert bytes type to dictionary
-        new_data = ast.literal_eval(decode_data)
-
-        # Try to get reference event document from Firestore
-        event_id: str = new_data["id"]
         docs = db.collection(
-            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+            u'Scheduled-Events').where(u'id', u'==', event_id).where(u'author',u'==',uid).stream()
 
         # Delete document
         for doc in docs:
@@ -104,10 +109,23 @@ def delete_event() -> Response:
 @check_token
 def update_event() -> Response:
     """
-    Firestore DB 'write' for updating a current event in the Schedule module
-
-    Returns:
-        Response of 200 for successfully editing the specified event 
+    Updates an event that has already been created.
+    ---
+    tags:
+        - event
+    summary: Updates event
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/Event'
+        description: Updated event object
+        required: true
+    responses:
+        201:
+            description: OK
+        400:
+            description: Bad request.
     """
     try:
         data: dict = request.get_json()
