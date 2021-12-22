@@ -1,4 +1,4 @@
-Event:
+EventData:
   id: Event Data
   type: object
   properties:
@@ -15,3 +15,18 @@ Event:
     eventDescription:
       type: string
       example: Drink coffee with your teammates
+
+Event:
+  type: object
+  properties:
+    author:
+      type: string
+      example: this is the author uid
+    data:
+      $ref: "#/components/schemas/EventData"
+    id:
+      type: string
+      example: this is the event id
+    timestamp:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss

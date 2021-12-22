@@ -31,11 +31,17 @@ def create_event() -> Response:
     tags:
         - event
     summary: Creates event
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
     requestBody:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/Event'
+                    $ref: '#/components/schemas/EventData'
         description: Created event object
         required: true
     responses:
@@ -76,7 +82,18 @@ def delete_event(event_id: str) -> Response:
     tags:
         - event
     summary: Deletes an event
-    
+    parameters: 
+        - in: path
+          name: event_id
+          schema:
+            type: string
+          description: The event id
+          required: true
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
     responses:
         200:
             description: File deleted
@@ -114,11 +131,17 @@ def update_event() -> Response:
     tags:
         - event
     summary: Updates event
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
     requestBody:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/Event'
+                    $ref: '#/components/schemas/EventData'
         description: Updated event object
         required: true
     responses:
@@ -127,13 +150,19 @@ def update_event() -> Response:
         400:
             description: Bad request.
     """
+    # Check user access levels
+    # Decode token to obtain user's firebase id
+    token: str = request.headers['Authorization']
+    decoded_token: dict = auth.verify_id_token(token)
+    
     try:
         data: dict = request.get_json()
         event_data: dict = data["data"]
         event_id: str = event_data["id"]
+        uid: str = decoded_token['uid']
 
         docs: list = db.collection(
-            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+            u'Scheduled-Events').where(u'id', u'==', event_id).where(u'author',u'==',uid).stream()
 
         # Try to get reference to event document from Firestore
         for doc in docs:
@@ -152,17 +181,39 @@ def update_event() -> Response:
         return Response(response="Edit failed", status=400)
 
 
-@events.get('/get_event')
+@events.get('/get_event/<event_id>')
 @check_token
 def get_event() -> Response:
     """
-    Firestore DB 'read' for specified event in the Schedule module
-
-    Returns:
-        An event of the specified event id passed from client side
+    Get an event from Firestore.   
+    ---
+    tags:
+        - event
+    summary: Gets an event
+    parameters:
+        - in: path
+          name: event_id
+          schema:
+              type: string
+          description: The event id
+          required: true
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Event'   
+        404:
+            description: The file with the given filename was not found
+        500:
+            description: Internal API Error
     """
     event_id = request.args.get('event')
-    event: list = []
 
     try:
         doc = db.collection(u'Scheduled-Events').document(event_id).get()
@@ -178,10 +229,28 @@ def get_event() -> Response:
 @check_token
 def get_recent_events() -> Response:
     """
-    Retrieve the latest initial upcoming and recent events
-
-    Returns:
-        Jsonified list of the latest 10 events from Firestore DB
+    Get recent 10 events from Firebase.
+    ---
+    tags:
+        - event
+    summary: Gets recent 10 events
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: string
+                        format: binary
+        404:
+            description: The file with the given filename was not found
+        500:
+            description: Internal API Error
     """
 
     try:
