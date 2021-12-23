@@ -31,3 +31,31 @@ EventData:
     eventDescription:
       type: string
       example: Drink coffee with your teammates
+
+File:
+  id: File
+  type: object
+  properties:
+    id:
+      type: string
+      example: db6dbef1-154b-4d34-9956-d718d524803b
+    filename:
+      type: string
+      example: 1380_Blank.pdf
+    status:
+      type: integer
+      minimum: 1
+      maximum: 5
+      example: 1
+      description: Requested = 1, Pending = 2, Review submitted = 3, Approved = 4, Rejected = 5
+    author:
+      type: string
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    reviewer:
+      type: string
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    file:
+      type: string
+      format: byte
+      example:
+      description: A file encoded in Base64

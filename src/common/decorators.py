@@ -9,39 +9,43 @@
 from functools import wraps
 from flask import json, request, jsonify
 from firebase_admin import auth
+from werkzeug.exceptions import Unauthorized
+import os
 
 
 def check_token(f):
     """
     This decorator verifies user idToken for protected routes so that only valid idTokens may access them
     """
+
     @wraps(f)
     def wrap(*args, **kwargs):
         """
         Receives idToken from the front-end and attempts to verify idToken and if successful, then access to protected route is granted.
         If the idToken is invalid for any reason whether it's expired or revoked, a corresponding error message is returned instead and access to protected route is denied.
         """
-        if "Authorization" not in request.headers:
-            return jsonify({'Error Message': 'Authorization token not provided'}), 400
+        if not request.headers.get("Authorization"):
+            raise Unauthorized("Authorization token not provided")
 
-        token: str = request.headers['Authorization']
+        token: str = request.headers["Authorization"]
 
         try:
             auth.verify_id_token(token, check_revoked=True)
 
         except auth.ExpiredIdTokenError:
-            return jsonify({'Error message': 'Token expired'}), 403
+            raise Unauthorized("Token expired")
 
         except auth.InvalidIdTokenError:
-            return jsonify({'Error message': 'Invalid token'}), 403
+            raise Unauthorized("Invalid token")
 
         except auth.RevokedIdTokenError:
-            return jsonify({'Error message': 'Token revoked'}), 403
+            raise Unauthorized("Token revoked")
 
         except:
-            return jsonify({'Error message': 'Invalid Token'}), 403
+            raise Unauthorized("Invalid Token")
 
         return f(*args, **kwargs)
+
     return wrap
 
 
@@ -49,14 +53,18 @@ def admin_only(f):
     """
     This decorator ensures that the following resource is only available to Admins
     """
+
     @wraps(f)
     def wrap(*args, **kwargs):
+        if os.getenv("FLASK_ENV") == "DEBUG":
+            pass
 
-        token: str = request.headers['Authorization']
+        token: str = request.headers["Authorization"]
         decoded_token: dict = auth.verify_id_token(token)
 
-        if decoded_token['admin'] is False:
-            return jsonify({'Error message': "You don't have the access rights"})
+        if decoded_token["admin"] is False:
+            raise Unauthorized("You don't have the access rights")
 
         return f(*args, **kwargs)
+
     return wrap

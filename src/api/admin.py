@@ -7,4 +7,4 @@
 from src.api import Blueprint
 
 
-admin: Blueprint = Blueprint('admin', __name__)
+admin: Blueprint = Blueprint("admin", __name__)
