@@ -27,10 +27,22 @@ roles: Blueprint = Blueprint('roles', __name__)
 @check_token
 def grant_role() -> Response:
     """
-    Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
-
-    Returns: 
-        Response of 200 of successfully adding role to user
+        Granted a role for newly registering user.
+    ---
+    tags:
+        - role
+    summary: Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            description: Successfully added role.
+        404:
+            description: Fail added role.
     """
 
     # Decode token to obtain user's firebase id
@@ -60,7 +72,7 @@ def grant_role() -> Response:
 
         return Response(response="Successfully added role", status=200)
     except:
-        return jsonify({"Message": "Not assigned a role"})
+        return Response(response="Fail added role", status=400)
 
 
 @roles.post('/create_role')
@@ -68,10 +80,29 @@ def grant_role() -> Response:
 @admin_only
 def create_role() -> Response:
     """
-    Creating a new custom role globally for the client side application
-
-    Returns:
-        Returns 200
+    Creating a new custom role globally for the client side application.
+    ---
+    tags:
+        - role
+    summary: Create role
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/Role'
+        description: Create a role by admin
+        required: true
+    responses:
+        200:
+            description: Successfully create a role.
+        401:
+            description: Unauthorized.
     """
     token: str = request.headers['Authorization']
     decoded_token: dict = auth.verify_id_token(token)
@@ -91,26 +122,44 @@ def create_role() -> Response:
 
         doc_ref.update({u'roleArray': firestore.ArrayUnion([role])})
 
-        return jsonify({"Message": "Complete"}), 200
+        return Response(response="Successfully create a role", status=200)
     else:
-        return jsonify({"Message": "Unauthorized"}), 401
+        return Response(response="Unauthorized", status=401)
 
 
 @roles.get('/get_all_roles')
 @check_token
 def get_all_roles() -> Response:
     """
-    Retrieve all custom roles created by admins in /createRole to the app
-
-    Returns:
-        Array of custom roles created by admins
+    Retrieve all custom roles created by admins in /createRole to the app.
+    ---
+    tags:
+        - role
+    summary: Gets all roles
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            type: string
+                        example:  ["nurse", "doctor", "frontdesk"]
+        401:
+            description: Unauthorized.
     """
     try:
         doc = db.collection(u'Roles').document(u'allRoles').get()
         data = doc.to_dict()['roleArray']
-        return jsonify(data)
+        return jsonify(data), 200
     except:
-        return jsonify({"Message": "Unauthorized"}), 401
+        return Response(response="Unauthorized", status=401)
 
 
 @roles.post('/assign_role')
@@ -119,9 +168,28 @@ def get_all_roles() -> Response:
 def assign_role() -> Response:
     """
     Assigns a custom role to a user and updates their level access accordingly
-
-    Returns:
-        Success response of 200
+    ---
+    tags:
+        - role
+    summary: Assign role
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/AssignRole'
+        description: Assign a role by admin
+        required: true
+    responses:
+        200:
+            description: Successfully Assign a role.
+        401:
+            description: Email doesn't exist.
     """
     token: str = request.headers['Authorization']
     decoded_token = auth.verify_id_token(token)
@@ -147,7 +215,7 @@ def assign_role() -> Response:
                     role: True,
                     "accessLevel": level
                 })
-                return jsonify({"Message": "Complete"}), 200
+                return Response(response="Successfully assign a role", status=200)
             # User has a role set previously
             else:
                 if current_custom_claims["accessLevel"] >= level:
@@ -165,9 +233,9 @@ def assign_role() -> Response:
                     }
                 }, merge=True)
 
-                return jsonify({"Message": "Complete"}), 200
+                return Response(response="Successfully assign a role", status=200)
         except:
-            return jsonify({"Error": "Email doesn't exist"}), 400
+            return Response(response="Email doesn't exist", status=400)
 
 
 @roles.post('/invite_role')
