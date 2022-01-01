@@ -1,5 +1,10 @@
 # Firebase credentials
 key.json
+.firebaserc
+firebase.json
+firestore.indexes.json
+firestore.rules
+storage.rules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
