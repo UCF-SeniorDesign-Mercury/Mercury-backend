@@ -245,8 +245,7 @@ def get_recent_events() -> Response:
             content:
                 application/json:
                     schema:
-                        type: string
-                        format: binary
+                        type: object
         404:
             description: The file with the given filename was not found
         500:
@@ -271,10 +270,30 @@ def get_recent_events() -> Response:
 @check_token
 def get_next_event_page() -> Response:
     """
-    Retrieves the next page of latest events for pagination. Picks off where /getRecentEvents ended
-
-    Returns;
-        Jsonified list of the next latest 10 events from Firestore DB
+    Get next 10 events from Firebase.
+    ---
+    tags:
+        - event
+    summary: Gets next 10 events by pass the last event id.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: ID
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: object
+        404:
+            description: Failed event retrieved
     """
     try:
         document: list = []
