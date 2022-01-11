@@ -8,7 +8,6 @@ import typing as t
 
 
 class Blueprint(bp):
-
     def get(self, rule: str, **options: t.Any) -> t.Callable:
         return self.route(rule, **options, methods=["GET"])
 

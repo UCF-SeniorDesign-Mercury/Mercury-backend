@@ -13,16 +13,17 @@
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
+from werkzeug.exceptions import Unauthorized, BadRequest
 import ast
 
 from src.api import Blueprint
 from src.common.database import db
 from src.common.decorators import check_token
 
-events: Blueprint = Blueprint('events', __name__)
+events: Blueprint = Blueprint("events", __name__)
 
 
-@events.post('/create_event')
+@events.post("/create_event")
 @check_token
 def create_event() -> Response:
     """
@@ -43,32 +44,29 @@ def create_event() -> Response:
             description: Event created
         400:
             description: Failed to add an event
+        401:
+            description: Unauthorized - the provided token is not valid
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
-    token: str = request.headers['Authorization']
+    token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
 
-    uid: str = decoded_token['uid']
+    uid: str = decoded_token["uid"]
 
-    # If exists, extract data from request
-    try:
-        data: dict = request.get_json()
-        data['author'] = uid
-        data['id'] = f'{uuid4()}'
-        data['timestamp'] = firestore.SERVER_TIMESTAMP
+    data: dict = request.get_json()
+    data["author"] = uid
+    data["id"] = f"{uuid4()}"
+    data["timestamp"] = firestore.SERVER_TIMESTAMP
 
-        # Write to Firestore DB
-        db.collection(u'Scheduled-Events').add(data)
+    # Write to Firestore DB
+    db.collection("Scheduled-Events").add(data)
 
-        # Return Response 201 for successfully creating a new resource
-        return Response(response="Event added", status=201)
-
-    except:
-        return Response(response="Failed to add event", status=400)
+    # Return Response 201 for successfully creating a new resource
+    return Response(response="Event added", status=201)
 
 
-@events.delete('/delete_event')
+@events.delete("/delete_event")
 def delete_event() -> Response:
     """
     Firestore DB 'delete' for removing an event in the Schedule module
@@ -86,55 +84,63 @@ def delete_event() -> Response:
 
         # Try to get reference event document from Firestore
         event_id: str = new_data["id"]
-        docs = db.collection(
-            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        docs = (
+            db.collection("Scheduled-Events")
+            .where("id", "==", event_id)
+            .stream()
+        )
 
         # Delete document
         for doc in docs:
             # Store document id and use it to locate the specific document to delete
             doc_id = doc.id
-            db.collection(u'Scheduled-Events').document(doc_id).delete()
+            db.collection("Scheduled-Events").document(doc_id).delete()
 
         return Response(response="Event deleted", status=200)
     except:
         return Response(response="Delete failed", status=400)
 
 
-@events.post('/update_event')
+@events.post("/update_event")
 @check_token
 def update_event() -> Response:
     """
     Firestore DB 'write' for updating a current event in the Schedule module
 
     Returns:
-        Response of 200 for successfully editing the specified event 
+        Response of 200 for successfully editing the specified event
     """
     try:
         data: dict = request.get_json()
         event_data: dict = data["data"]
         event_id: str = event_data["id"]
 
-        docs: list = db.collection(
-            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        docs: list = (
+            db.collection("Scheduled-Events")
+            .where("id", "==", event_id)
+            .stream()
+        )
 
         # Try to get reference to event document from Firestore
         for doc in docs:
             doc_id = doc.id
 
             # Update document
-            db.collection(u'Scheduled-Events').document(doc_id).update({
-                u'data.eventDate': event_data["eventDate"],
-                u'data.eventDescription': event_data["eventDescription"],
-                u'data.eventOrganizer': event_data["eventOrganizer"],
-                u'data.eventTitle': event_data["eventTitle"]
-            })
+            db.collection("Scheduled-Events").document(doc_id).update(
+                {
+                    "data.eventDate": event_data["eventDate"],
+                    "data.eventDescription": event_data["eventDescription"],
+                    "data.eventOrganizer": event_data["eventOrganizer"],
+                    "data.eventTitle": event_data["eventTitle"],
+                }
+            )
 
         return Response(response="Event edited", status=200)
     except:
         return Response(response="Edit failed", status=400)
 
 
-@events.get('/get_event')
+@events.get("/get_event")
 @check_token
 def get_event() -> Response:
     """
@@ -143,11 +149,11 @@ def get_event() -> Response:
     Returns:
         An event of the specified event id passed from client side
     """
-    event_id = request.args.get('event')
+    event_id = request.args.get("event")
     event: list = []
 
     try:
-        doc = db.collection(u'Scheduled-Events').document(event_id).get()
+        doc = db.collection("Scheduled-Events").document(event_id).get()
         if doc.exists:
             return jsonify(doc.to_dict()), 200
 
@@ -156,7 +162,7 @@ def get_event() -> Response:
         return Response(response="Failed to retrieve", status=400)
 
 
-@events.get('/get_recent_events')
+@events.get("/get_recent_events")
 @check_token
 def get_recent_events() -> Response:
     """
@@ -167,8 +173,12 @@ def get_recent_events() -> Response:
     """
 
     try:
-        docs: list = db.collection(u'Scheduled-Events').order_by(u'timestamp',
-                                                                 direction=firestore.Query.DESCENDING).limit(10).stream()
+        docs: list = (
+            db.collection("Scheduled-Events")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .limit(10)
+            .stream()
+        )
 
         events: list = []
         for doc in docs:
@@ -180,7 +190,7 @@ def get_recent_events() -> Response:
         return Response(response="Failed event retrieved", status=400)
 
 
-@events.get('/get_next_event_page')
+@events.get("/get_next_event_page")
 @check_token
 def get_next_event_page() -> Response:
     """
@@ -194,17 +204,25 @@ def get_next_event_page() -> Response:
         events: list = []
 
         # Get ID of last event from client-side
-        event_id: str = request.headers['ID']
+        event_id: str = request.headers["ID"]
 
         # Get reference to document with that ID
-        last_ref = db.collection(
-            u'Scheduled-Events').where(u'id', u'==', event_id).stream()
+        last_ref = (
+            db.collection("Scheduled-Events")
+            .where("id", "==", event_id)
+            .stream()
+        )
         for doc in last_ref:
             document.append(doc.to_dict())
 
         # Get the next batch of documents that come after the last document we received a reference to before
-        docs = db.collection(u'Scheduled-Events').order_by(u'timestamp',
-                                                           direction=firestore.Query.DESCENDING).start_after(document[0]).limit(10).stream()
+        docs = (
+            db.collection("Scheduled-Events")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .start_after(document[0])
+            .limit(10)
+            .stream()
+        )
         for doc in docs:
             events.append(doc.to_dict())
 
