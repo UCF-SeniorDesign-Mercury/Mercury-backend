@@ -185,7 +185,7 @@ def update_event() -> Response:
 @check_token
 def get_event() -> Response:
     """
-    Get an event from Firestore.   
+    Get an event from database.
     ---
     tags:
         - event
@@ -229,7 +229,7 @@ def get_event() -> Response:
 @check_token
 def get_recent_events() -> Response:
     """
-    Get recent 10 events from Firebase.
+    Get recent 10 events from database.
     ---
     tags:
         - event

@@ -35,18 +35,18 @@ Role:
   type: object
   properties:
     roleName:
-      type: string 
-      example: Admin
-    level: 
       type: string
-      example: '1'
+      example: Admin
+    level:
+      type: string
+      example: "1"
 
 AssignRole:
   type: object
   properties:
     email:
-      type: string 
-      example: admin@gmail.com
-    role: 
       type: string
-      example: Doctor   
+      example: admin@gmail.com
+    role:
+      type: string
+      example: Doctor
