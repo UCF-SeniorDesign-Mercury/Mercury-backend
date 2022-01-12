@@ -30,7 +30,7 @@ files: Blueprint = Blueprint("files", __name__)
 
 
 @files.post("/upload_file")
-# @check_token
+@check_token
 def upload_file() -> Response:
     """
     Upload a PDF file to Firebase Storage.
@@ -99,7 +99,7 @@ def upload_file() -> Response:
 
 
 @files.get("/get_file/<file_id>/")
-# @check_token
+@check_token
 def get_file(file_id: str) -> Response:
     """
     Get a file from Firebase Storage.
@@ -154,7 +154,7 @@ def get_file(file_id: str) -> Response:
 
 
 @files.delete("/delete_file/<file_id>/")
-# @check_token
+@check_token
 def delete_file(file_id: str) -> Response:
     """
     Delete a file from Firebase Storage.
