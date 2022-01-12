@@ -38,8 +38,8 @@ Role:
       type: string
       example: Admin
     level:
-      type: string
-      example: "1"
+      type: integer
+      example: 1
 
 AssignRole:
   type: object
@@ -50,6 +50,7 @@ AssignRole:
     role:
       type: string
       example: Doctor
+
 File:
   id: File
   type: object
@@ -75,5 +76,4 @@ File:
     file:
       type: string
       format: byte
-      example:
       description: A file encoded in Base64

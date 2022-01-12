@@ -27,29 +27,22 @@ roles: Blueprint = Blueprint("roles", __name__)
 @check_token
 def grant_role() -> Response:
     """
-    <<<<<<< HEAD
-            Granted a role for newly registering user.
-        ---
-        tags:
-            - role
-        summary: Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
-        parameters:
-            - in: header
-              name: Authorization
-              schema:
-                type: string
-              required: true
-        responses:
-            200:
-                description: Successfully added role.
-            404:
-                description: Fail added role.
-    =======
-        Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
-
-        Returns:
-            Response of 200 of successfully adding role to user
-    >>>>>>> refs/rewritten/merge-with-main
+    Granted a role for newly registered user.
+    ---
+    tags:
+        - role
+    summary: Upon newly registering a user, they are granted a role if their email used is matched to one in Roles/roleList document.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            description: Successfully added role.
+        404:
+            description: Fail added role.
     """
 
     # Decode token to obtain user's firebase id

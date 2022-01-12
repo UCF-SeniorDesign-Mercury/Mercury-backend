@@ -75,7 +75,7 @@ def create_event() -> Response:
 @events.delete("/delete_event/<event_id>")
 def delete_event(event_id: str) -> Response:
     """
-    Delete an event from Firebase.
+    Delete an event from database.
     ---
     tags:
         - event
@@ -94,7 +94,7 @@ def delete_event(event_id: str) -> Response:
           required: true
     responses:
         200:
-            description: File deleted
+            description: Event deleted
         404:
             description: Delete failed
     """
@@ -253,7 +253,9 @@ def get_recent_events() -> Response:
             content:
                 application/json:
                     schema:
-                        type: object
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Event'
         404:
             description: The file with the given filename was not found
         500:
@@ -303,7 +305,9 @@ def get_next_event_page() -> Response:
             content:
                 application/json:
                     schema:
-                        type: object
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Event'
         404:
             description: Failed event retrieved
     """
