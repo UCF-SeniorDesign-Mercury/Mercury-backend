@@ -11,6 +11,7 @@ from src.api.roles import roles
 from src.api.events import events
 from src.api.files import files
 from flask import Flask, jsonify
+from flask_cors import CORS
 from flasgger import Swagger
 from os import path, environ
 import yaml
@@ -19,6 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 schemapath = path.join(path.abspath(path.dirname(__file__)), "schemas.yml")
 schemastream = open(schemapath, "r")
@@ -62,3 +64,4 @@ def page_not_found(e) -> Response:
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(environ.get("PORT", 8080)), debug=True)
+    # app.run(host="localhost", port=int(environ.get("PORT", 5000)), debug=True)

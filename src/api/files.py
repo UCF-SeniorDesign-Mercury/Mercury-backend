@@ -31,7 +31,7 @@ files: Blueprint = Blueprint("files", __name__)
 
 
 @files.post("/upload_file")
-# @check_token
+@check_token
 def upload_file() -> Response:
     """
     Upload a PDF file to Firebase Storage.
@@ -57,10 +57,10 @@ def upload_file() -> Response:
             description: Internal API Error
     """
     # check tokens and get uid from token
-    # token: str = request.headers["Authorization"]
-    # decoded_token: dict = auth.verify_id_token(token)
-    # uid: str = decoded_token["uid"]
-    uid: str = str(uuid4())
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token["uid"]
+    # uid: str = str(uuid4())
     id = str(uuid4())
     data: dict = request.get_json()
 
@@ -98,14 +98,14 @@ def upload_file() -> Response:
     blob.upload_from_string(file, content_type="application/pdf")
 
     # update user table
-    # user_ref = db.collection(u"User").document(uid)
-    # user_ref.update({u"files" : firestore.ArrayUnion([id])})
+    user_ref = db.collection(u"User").document(uid)
+    user_ref.update({u"files" : firestore.ArrayUnion([id])})
 
     return Response(response="File added", status=201)
 
 
 @files.get("/get_file/<file_id>/")
-# @check_token
+@check_token
 def get_file(file_id: str) -> Response:
     """
     Get a file from Firebase Storage.
@@ -132,9 +132,9 @@ def get_file(file_id: str) -> Response:
             description: Internal API Error
     """
     # check tokens and get uid from token
-    # token: str = request.headers["Authorization"]
-    # decoded_token: dict = auth.verify_id_token(token)
-    # uid: str = decoded_token["uid"]
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token["uid"]
 
     # get pdf from the firebase storage
     bucket = storage.bucket()
@@ -151,20 +151,20 @@ def get_file(file_id: str) -> Response:
     res["file"] = file.decode("utf-8")
 
     # Only the author, reviewer, and admin have access to the data
-    # if (
-    #     uid != res.get("reviewer")
-    #     and uid != res.get("author")
-    #     # or decoded_token.get("admin") != True
-    # ):
-    #     raise Unauthorized(
-    #         "The user is not authorized to retrieve this content"
-    #     )
+    if (
+        uid != res.get("reviewer")
+        and uid != res.get("author")
+        # or decoded_token.get("admin") != True
+    ):
+        raise Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
 
     return jsonify(res), 200
 
 
 @files.delete("/delete_file/<file_id>/")
-# @check_token
+@check_token
 def delete_file(file_id: str) -> Response:
     """
     Delete a file from Firebase Storage.
@@ -188,19 +188,22 @@ def delete_file(file_id: str) -> Response:
             description: Internal API Error
     """
     # check tokens and get uid from token
-    # token: str = request.headers["Authorization"]
-    # decoded_token: dict = auth.verify_id_token(token)
-    # uid: str = decoded_token["uid"]
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token["uid"]
+
+    # get file data from firestore
+    data = db.collection(u"Files").document(file_id)
 
     # Only the author, reviewer, and admin have access to the data
-    # if (
-    #     uid != res.get("reviewer")
-    #     or uid != res.get("author")
-    #     or decoded_token.get("admin") != True
-    # ):
-    #     raise Unauthorized(
-    #         "The user is not authorized to retrieve this content"
-    #     )
+    if (
+        uid != data.get("reviewer")
+        or uid != data.get("author")
+        or decoded_token.get("admin") != True
+    ):
+        raise Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
 
     # delete the pdf from firebase storage
     bucket = storage.bucket()
@@ -210,17 +213,17 @@ def delete_file(file_id: str) -> Response:
     blob.delete()
 
     # delete the data from firesotre
-    db.collection(u"Files").document(file_id).delete()
+    data.delete()
 
     # update the user table
-    # user_ref = db.collection(u"User").document(uid)
-    # user_ref.update({u"files" : firestore.ArrayRemove([id])})
+    user_ref = db.collection(u"User").document(uid)
+    user_ref.update({u"files" : firestore.ArrayRemove([id])})
 
     return Response(response="File deleted", status=200)
 
 
 @files.put("/change_status/")
-# @check_token
+@check_token
 def change_status():
     """
     Change the status of a file case from Firebase Storage.
@@ -242,10 +245,10 @@ def change_status():
             description: Internal API Error
     """
     # check tokens and get uid from token
-    # token: str = request.headers["Authorization"]
-    # decoded_token: dict = auth.verify_id_token(token)
-    # uid: str = decoded_token["reviwer"]
-    uid = "test00"
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token["reviwer"]
+    # uid = "test00"
     data: dict = request.get_json()
 
     # exceptions
@@ -256,13 +259,13 @@ def change_status():
     file = db.collection(u"Files").document(data['file_id'])
 
     # Only the reviewer, and admin have access to change the status of the file
-    # if (
-    #     uid != file.get("reviewer")
-    #     or decoded_token.get("admin") != True
-    # ):
-    #     raise Unauthorized(
-    #         "The user is not authorized to retrieve this content"
-    #     )
+    if (
+        uid != file.get("reviewer")
+        or decoded_token.get("admin") != True
+    ):
+        raise Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
     
     if "comment" in data:
         file.update({u"comment" : data["comment"]})
