@@ -7,8 +7,7 @@
         delete_file()
         get_file()
 """
-from xmlrpc.client import boolean
-from flask import Response, request, send_file
+from flask import Response, request
 from src.common.decorators import check_token
 from werkzeug.exceptions import (
     BadRequest,
@@ -17,10 +16,7 @@ from werkzeug.exceptions import (
     UnsupportedMediaType,
 )
 from firebase_admin import storage, auth, firestore
-from io import BytesIO, UnsupportedOperation
 from uuid import uuid4
-from enum import Enum
-from base64 import b64encode, b64decode
 from os.path import splitext
 from flask import jsonify
 
@@ -60,11 +56,10 @@ def upload_file() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token["uid"]
-    # uid: str = str(uuid4())
     id = str(uuid4())
     data: dict = request.get_json()
 
-    # Expcetions
+    # Exceptions
     if "file" in data:
         file = data["file"]
     else:
@@ -198,8 +193,8 @@ def delete_file(file_id: str) -> Response:
     # Only the author, reviewer, and admin have access to the data
     if (
         uid != data.get("reviewer")
-        or uid != data.get("author")
-        or decoded_token.get("admin") != True
+        and uid != data.get("author")
+        and decoded_token.get("admin") != True
     ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
@@ -248,7 +243,6 @@ def change_status():
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token["reviwer"]
-    # uid = "test00"
     data: dict = request.get_json()
 
     # exceptions
@@ -259,7 +253,7 @@ def change_status():
     file = db.collection(u"Files").document(data["file_id"])
 
     # Only the reviewer, and admin have access to change the status of the file
-    if uid != file.get("reviewer") or decoded_token.get("admin") != True:
+    if uid != file.get("reviewer") and decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
