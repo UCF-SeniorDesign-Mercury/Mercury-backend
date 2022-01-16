@@ -91,7 +91,7 @@ def upload_file() -> Response:
     entry["reviewer"] = data["reviewer"]
     entry["comment"] = ""
     db.collection(u"Files").document(id).set(entry)
-    
+
     # save pdf to firestore storage
     bucket = storage.bucket()
     blob = bucket.blob(id)
@@ -99,7 +99,7 @@ def upload_file() -> Response:
 
     # update user table
     user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"files" : firestore.ArrayUnion([id])})
+    user_ref.update({u"files": firestore.ArrayUnion([id])})
 
     return Response(response="File added", status=201)
 
@@ -154,7 +154,7 @@ def get_file(file_id: str) -> Response:
     if (
         uid != res.get("reviewer")
         and uid != res.get("author")
-        # or decoded_token.get("admin") != True
+        and decoded_token.get("admin") != True
     ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
@@ -217,7 +217,7 @@ def delete_file(file_id: str) -> Response:
 
     # update the user table
     user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"files" : firestore.ArrayRemove([id])})
+    user_ref.update({u"files": firestore.ArrayRemove([id])})
 
     return Response(response="File deleted", status=200)
 
@@ -252,30 +252,21 @@ def change_status():
     data: dict = request.get_json()
 
     # exceptions
-    if data["decision"] < 3 or data["decision"] >5:
+    if data["decision"] < 3 or data["decision"] > 5:
         raise BadRequest("Unsupported decision type.")
 
     # fetch the file data from firestore
-    file = db.collection(u"Files").document(data['file_id'])
+    file = db.collection(u"Files").document(data["file_id"])
 
     # Only the reviewer, and admin have access to change the status of the file
-    if (
-        uid != file.get("reviewer")
-        or decoded_token.get("admin") != True
-    ):
+    if uid != file.get("reviewer") or decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
-    
+
     if "comment" in data:
-        file.update({u"comment" : data["comment"]})
-    
-    file.update({u"status" : data["decision"]})
+        file.update({u"comment": data["comment"]})
 
-    return Response("Status changed" , 200)
+    file.update({u"status": data["decision"]})
 
-
-
-
-
-
+    return Response("Status changed", 200)
