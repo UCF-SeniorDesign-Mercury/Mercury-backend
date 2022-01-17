@@ -77,3 +77,23 @@ File:
       type: string
       format: byte
       description: A file encoded in Base64
+
+Status:
+  id: Status
+  type: object
+  properties:
+    file_id:
+      type: string
+      required: true
+      description: this is the file id
+      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
+    decision:
+      type: integer
+      required: true
+      decription: Require resubmit = 3, Approved = 4, Rejected = 5
+      example: 3
+    comment:
+      type: string
+      required: false
+      decription: this is the place the reviewer or admin could leave a commet for the author
+      example: the date is wrong need resubmit it again.
