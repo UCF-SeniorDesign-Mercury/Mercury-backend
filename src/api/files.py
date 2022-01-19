@@ -35,6 +35,12 @@ def upload_file() -> Response:
     tags:
         - files
     summary: Uploads a file
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
     requestBody:
         content:
             application/json:
@@ -109,6 +115,11 @@ def get_file(file_id: str) -> Response:
         - files
     summary: Gets a file
     parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
         - name: file_id
           in: path
           schema:
@@ -168,6 +179,11 @@ def delete_file(file_id: str) -> Response:
         - files
     summary: Deletes a file
     parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
         - name: file_id
           in: path
           schema:
@@ -217,6 +233,68 @@ def delete_file(file_id: str) -> Response:
     return Response(response="File deleted", status=200)
 
 
+@files.put("/update_file/")
+@check_token
+def update_file():
+    """
+    The users update their own file from Firebase Storage.
+    ---
+    tags:
+        - files
+    summary: update file
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/UpdateFile'
+    responses:
+        200:
+            description: File Updated
+        404:
+            description: The file not found
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    author_uid: str = decoded_token["uid"]
+    data: dict = request.get_json()
+
+    # fetch the file data from firestore
+    file = db.collection(u"Files").document(data["file_id"])
+
+    # exceptions
+    if file.exists:
+        return Response("The file with the given filename was not found", 404)
+    if file["decision"] < 0 or file["decision"] > 3:
+        raise BadRequest("Files is not allow to change after decision made")
+
+    # Only the author have access to update the file
+    if author_uid != file.get("author"):
+        raise Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
+
+    # if filename in the request update it
+    if "filename" in data:
+        file.update({u"filename": data["filename"]})
+
+    if "file" in data:
+        # save pdf to firestore storage
+        bucket = storage.bucket()
+        blob = bucket.blob(file.get("id"))
+        blob.upload_from_string(data["file"], content_type="application/pdf")
+
+    return Response("Status changed", 200)
+
+
 @files.put("/change_status/")
 @check_token
 def change_status():
@@ -226,6 +304,12 @@ def change_status():
     tags:
         - files
     summary: Change the status
+        parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
     requestBody:
         content:
             application/json:
@@ -242,7 +326,7 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["reviwer"]
+    reviewer: str = decoded_token["uid"]
     data: dict = request.get_json()
 
     # exceptions
@@ -253,7 +337,7 @@ def change_status():
     file = db.collection(u"Files").document(data["file_id"])
 
     # Only the reviewer, and admin have access to change the status of the file
-    if uid != file.get("reviewer") and decoded_token.get("admin") != True:
+    if reviewer != file.get("reviewer") and decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
