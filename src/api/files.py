@@ -159,9 +159,7 @@ def get_file(file_id: str) -> Response:
         and uid != res.get("author")
         and decoded_token.get("admin") != True
     ):
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     return jsonify(res), 200
 
@@ -214,9 +212,7 @@ def delete_file(file_id: str) -> Response:
         and uid != data["author"]
         and decoded_token.get("admin") != True
     ):
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     # delete the pdf from firebase storage
     bucket = storage.bucket()
@@ -285,9 +281,7 @@ def update_file():
 
     # Only the author have access to update the file
     if author_uid != file["author"]:
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     # if filename in the request update it
     if "filename" in data:
@@ -298,9 +292,7 @@ def update_file():
         try:
             bucket = storage.bucket()
             blob = bucket.blob(data["file_id"])
-            blob.upload_from_string(
-                data["file"], content_type="application/pdf"
-            )
+            blob.upload_from_string(data["file"], content_type="application/pdf")
         except:
             raise BadRequest("cannot update to storage")
 
@@ -351,9 +343,7 @@ def change_status():
 
     # Only the reviewer, and admin have access to change the status of the file
     if reviewer != file["reviewer"] and decoded_token.get("admin") != True:
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     if "comment" in data:
         file_ref.update({u"comment": data["comment"]})
