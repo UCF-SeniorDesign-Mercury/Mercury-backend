@@ -59,10 +59,6 @@ File:
       type: string
       example: 1380_Blank.pdf
       required: true
-    author:
-      type: string
-      required: true
-      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     reviewer:
       type: string
       required: true
@@ -79,7 +75,7 @@ UpdateFile:
   properties:
     file_id:
       type: string
-      example:
+      example: f15bf339-7ac2-4f39-a5a8-a292fc34c241
       required: true
     filename:
       type: string

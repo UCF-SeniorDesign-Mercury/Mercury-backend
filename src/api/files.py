@@ -26,7 +26,7 @@ from src.api import Blueprint
 files: Blueprint = Blueprint("files", __name__)
 
 
-@files.post("/upload_file")
+@files.post("/upload_file/")
 @check_token
 def upload_file() -> Response:
     """
@@ -62,7 +62,7 @@ def upload_file() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token["uid"]
-    id = str(uuid4())
+    file_id: str = str(uuid4())
     data: dict = request.get_json()
 
     # Exceptions
@@ -76,31 +76,28 @@ def upload_file() -> Response:
             "Unsupported media type. The endpoint only accepts PDFs"
         )
 
-    if data.get("status") and data.get("status") < 1 or data.get("status") > 5:
-        raise BadRequest("The file status is not supported")
-
     if "reviewer" not in data:
-        raise BadRequest("Missing one reviewer")
+        raise BadRequest("Missing the reviewer")
 
     # save data to firestore batabase
     entry: dict = dict()
-    entry["id"] = id
+    entry["id"] = file_id
     entry["author"] = uid
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["filename"] = data.get("filename")
-    entry["status"] = data.get("status")
+    entry["status"] = 1
     entry["reviewer"] = data["reviewer"]
     entry["comment"] = ""
-    db.collection(u"Files").document(id).set(entry)
+    db.collection(u"Files").document(file_id).set(entry)
 
     # save pdf to firestore storage
     bucket = storage.bucket()
-    blob = bucket.blob(id)
+    blob = bucket.blob(file_id)
     blob.upload_from_string(file, content_type="application/pdf")
 
     # update user table
     user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"files": firestore.ArrayUnion([id])})
+    user_ref.update({u"files": firestore.ArrayUnion([file_id])})
 
     return Response(response="File added", status=201)
 
@@ -204,12 +201,17 @@ def delete_file(file_id: str) -> Response:
     uid: str = decoded_token["uid"]
 
     # get file data from firestore
-    data = db.collection(u"Files").document(file_id)
+    data_ref = db.collection(u"Files").document(file_id)
+
+    if not data_ref.get().exists:
+        return Response("The file not found", 404)
+
+    data = data_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
     if (
-        uid != data.get("reviewer")
-        and uid != data.get("author")
+        uid != data["reviewer"]
+        and uid != data["author"]
         and decoded_token.get("admin") != True
     ):
         raise Unauthorized(
@@ -224,11 +226,11 @@ def delete_file(file_id: str) -> Response:
     blob.delete()
 
     # delete the data from firesotre
-    data.delete()
+    data_ref.delete()
 
     # update the user table
     user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"files": firestore.ArrayRemove([id])})
+    user_ref.update({u"files": firestore.ArrayRemove([file_id])})
 
     return Response(response="File deleted", status=200)
 
@@ -268,31 +270,41 @@ def update_file():
     data: dict = request.get_json()
 
     # fetch the file data from firestore
-    file = db.collection(u"Files").document(data["file_id"])
+    file_ref = db.collection(u"Files").document(data["file_id"])
+    file = file_ref.get().to_dict()
 
     # exceptions
-    if file.exists:
-        return Response("The file with the given filename was not found", 404)
-    if file["decision"] < 0 or file["decision"] > 3:
+    if not file_ref.get().exists:
+        return Response(
+            response="The file with the given filename was not found",
+            status=404,
+        )
+
+    if file["status"] < 0 or file["status"] > 3:
         raise BadRequest("Files is not allow to change after decision made")
 
     # Only the author have access to update the file
-    if author_uid != file.get("author"):
+    if author_uid != file["author"]:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
     # if filename in the request update it
     if "filename" in data:
-        file.update({u"filename": data["filename"]})
+        file_ref.update({u"filename": data["filename"]})
 
     if "file" in data:
         # save pdf to firestore storage
-        bucket = storage.bucket()
-        blob = bucket.blob(file.get("id"))
-        blob.upload_from_string(data["file"], content_type="application/pdf")
+        try:
+            bucket = storage.bucket()
+            blob = bucket.blob(data["file_id"])
+            blob.upload_from_string(
+                data["file"], content_type="application/pdf"
+            )
+        except:
+            raise BadRequest("cannot update to storage")
 
-    return Response("Status changed", 200)
+    return Response("File Updated", 200)
 
 
 @files.put("/change_status/")
@@ -304,7 +316,7 @@ def change_status():
     tags:
         - files
     summary: Change the status
-        parameters:
+    parameters:
         - in: header
           name: Authorization
           schema:
@@ -334,17 +346,18 @@ def change_status():
         raise BadRequest("Unsupported decision type.")
 
     # fetch the file data from firestore
-    file = db.collection(u"Files").document(data["file_id"])
+    file_ref = db.collection(u"Files").document(data["file_id"])
+    file = file_ref.get().to_dict()
 
     # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != file.get("reviewer") and decoded_token.get("admin") != True:
+    if reviewer != file["reviewer"] and decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
     if "comment" in data:
-        file.update({u"comment": data["comment"]})
+        file_ref.update({u"comment": data["comment"]})
 
-    file.update({u"status": data["decision"]})
+    file_ref.update({u"status": data["decision"]})
 
     return Response("Status changed", 200)
