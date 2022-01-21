@@ -3,9 +3,11 @@
     src.api.files
     ~~~~~~~~~~~~~
     Functions:
-        add_file()
+        change_status()
         delete_file()
         get_file()
+        update_file()
+        upload_file()
 """
 from flask import Response, request
 from src.common.decorators import check_token
