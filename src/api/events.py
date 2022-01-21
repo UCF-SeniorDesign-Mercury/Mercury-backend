@@ -190,7 +190,7 @@ def update_event() -> Response:
     return Response(response="Event updated", status=200)
 
 
-@events.get("/get_event/<event_id>/")
+@events.get("/get_event/<event_id>")
 @check_token
 def get_event(event_id: str) -> Response:
     """
