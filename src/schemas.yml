@@ -1,18 +1,35 @@
 EventData:
-  id: Event Data
   type: object
   properties:
-    eventTitle:
+    title:
       type: string
-      example: Coffee meeting
-    eventOrganizer:
-      type: string
-      example: Your employer
-    eventDate:
-      type: string
-      format: date
+      example: Coffe time
+    date:
+      type: date
       example: YYYY-MM-DD
-    eventDescription:
+    organizer:
+      type: string
+      example: The organier name
+    description:
+      type: string
+      example: Drink coffee with your teammates
+
+UpdateEvent:
+  type: object
+  properties:
+    title:
+      type: string
+      example: Coffe time
+    id:
+      type: string
+      example: The event id here
+    date:
+      type: date
+      example: YYYY-MM-DD
+    organizer:
+      type: string
+      example: The organier name
+    description:
       type: string
       example: Drink coffee with your teammates
 
@@ -22,14 +39,27 @@ Event:
     author:
       type: string
       example: this is the author uid
-    data:
-      $ref: "#/components/schemas/EventData"
     id:
       type: string
       example: this is the event id
     timestamp:
       type: timestamp
       example: yy-MM-dd SSS HH:mm:ss
+    title:
+      type: string
+      example: Coffe time
+    date:
+      type: date
+      example: YYYY-MM-DD
+    organizer:
+      type: string
+      example: The organier name
+    description:
+      type: string
+      example: Drink coffee with your teammates
+    participators:
+      type: array
+      example: ["001", "002", "003", "007"]
 
 Role:
   type: object
@@ -85,8 +115,7 @@ UpdateFile:
       format: byte
       description: A file encoded in Base64
 
-Status:
-  id: Status
+FileStatus:
   type: object
   properties:
     file_id:
@@ -104,3 +133,17 @@ Status:
       required: false
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
+
+EventStatus:
+  type: object
+  properties:
+    event_id:
+      type: string
+      required: true
+      description: this is the event id
+      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
+    decision:
+      type: integer
+      required: true
+      decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
+      example: 3
