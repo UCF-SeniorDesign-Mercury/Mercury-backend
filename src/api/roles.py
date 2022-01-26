@@ -10,7 +10,6 @@
         invite_role()
         revoke_role()
 """
-from ast import Num
 from firebase_admin import auth, firestore
 from firebase_admin.auth import UserRecord
 from flask import Response, jsonify, request

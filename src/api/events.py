@@ -16,6 +16,13 @@
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
+from werkzeug.exceptions import (
+    BadRequest,
+    NotFound,
+    Forbidden,
+    Unauthorized,
+    UnsupportedMediaType,
+)
 
 from src.api import Blueprint
 from src.common.database import db
@@ -59,7 +66,7 @@ def create_event() -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # check user permission
 
@@ -68,7 +75,7 @@ def create_event() -> Response:
     data["author"] = uid
     data["id"] = str(uuid4())
     data["timestamp"] = firestore.SERVER_TIMESTAMP
-    data["participators"] = []
+    data["participants"] = []
     data["status"] = 1
 
     # write to Firestore DB
@@ -80,7 +87,7 @@ def create_event() -> Response:
 
 @events.delete("/delete_event/<event_id>")
 @check_token
-# @admin_only
+@admin_only
 def delete_event(event_id: str) -> Response:
     """
     Delete an event from database.
@@ -112,15 +119,15 @@ def delete_event(event_id: str) -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event = event_ref.get().to_dict()
 
-    # if enevt does not exists
+    # if event does not exists
     if not event_ref.get().exists:
-        return Response("The event not found", 404)
+        return NotFound("The event not found", 404)
 
     # # Future function: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:
@@ -170,15 +177,15 @@ def update_event() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     data: dict = request.get_json()
     event_id: str = data["id"]
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event = event_ref.get().to_dict()
 
-    # if enevt does not exists
+    # if event does not exists
     if not event_ref.get().exists:
-        return Response("The event not found", 404)
+        return NotFound("The event not found", 404)
 
     # # Future FUnction: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:
@@ -240,7 +247,7 @@ def get_event(event_id: str) -> Response:
 
     # event not found exception
     if not doc.exists:
-        return Response(response="Event no longer exist", status=404)
+        return NotFound("Event no longer exist", 404)
 
     return jsonify(doc.to_dict()), 200
 
@@ -336,9 +343,7 @@ def get_next_event_page() -> Response:
 
         # Get reference to document with that ID
         last_ref = (
-            db.collection("Scheduled-Events")
-            .where("id", "==", event_id)
-            .stream()
+            db.collection("Scheduled-Events").where("id", "==", event_id).stream()
         )
         for doc in last_ref:
             document.append(doc.to_dict())
@@ -392,7 +397,7 @@ def register_event(event_id: str) -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
@@ -400,10 +405,10 @@ def register_event(event_id: str) -> Response:
 
     # if enevt does not exists
     if not event_ref.get().exists:
-        return Response("The event no longer exists", 404)
+        return NotFound("The event no longer exists", 404)
     # Only the event organisor or the admin could delete the event
     if event["status"] > 1:
-        return Response("The event close for register", 403)
+        return Forbidden("The event is closed for registration", 403)
 
     # Future function: candidates_filter nice to have
 
@@ -447,7 +452,7 @@ def cancel_register(event_id: str) -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
@@ -455,7 +460,7 @@ def cancel_register(event_id: str) -> Response:
 
     # if enevt does not exists
     if not event_ref.get().exists:
-        return Response("The event no longer exists", 404)
+        return NotFound("The event no longer exists", 404)
 
     # add the user uid to the participators array
     event_ref.update({"participators": firestore.ArrayRemove([uid])})
@@ -503,12 +508,12 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    reviewer: str = decoded_token["uid"]
+    reviewer: str = decoded_token.get("uid")
     data: dict = request.get_json()
 
     # exceptions
     if data["decision"] < 1 or data["decision"] > 6:
-        return Response("Unsupported decision type", 400)
+        return BadRequest("Unsupported decision type", 400)
 
     # fetch the file data from firestore
     event_ref = db.collection(u"Scheduled-Events").document(data["event_id"])

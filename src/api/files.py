@@ -12,6 +12,7 @@
 from flask import Response, request
 from src.common.decorators import check_token
 from werkzeug.exceptions import (
+    InternalServerError,
     BadRequest,
     NotFound,
     Unauthorized,
@@ -63,7 +64,7 @@ def upload_file() -> Response:
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
     file_id: str = str(uuid4())
     data: dict = request.get_json()
 
@@ -139,7 +140,7 @@ def get_file(file_id: str) -> Response:
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # get pdf from the firebase storage
     bucket = storage.bucket()
@@ -161,9 +162,7 @@ def get_file(file_id: str) -> Response:
         and uid != res.get("author")
         and decoded_token.get("admin") != True
     ):
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     return jsonify(res), 200
 
@@ -200,25 +199,24 @@ def delete_file(file_id: str) -> Response:
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token["uid"]
+    uid: str = decoded_token.get("uid")
 
     # get file data from firestore
     data_ref = db.collection(u"Files").document(file_id)
 
     if not data_ref.get().exists:
-        return Response("The file not found", 404)
+        return NotFound("The file not found", 404)
 
-    data = data_ref.get().to_dict()
-
+    data: dict = data_ref.get().to_dict()
+    doc_ref = db.collection(u"User").document(uid).get()
+    doc: dict = doc_ref.to_dict()
     # Only the author, reviewer, and admin have access to the data
     if (
-        uid != data["reviewer"]
-        and uid != data["author"]
-        and decoded_token.get("admin") != True
+        uid != data.get("reviewer")
+        and uid != data.get("author")
+        and doc.get("Role") != "admin"
     ):
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     # delete the pdf from firebase storage
     bucket = storage.bucket()
@@ -268,7 +266,7 @@ def update_file():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    author_uid: str = decoded_token["uid"]
+    author_uid: str = decoded_token.get("uid")
     data: dict = request.get_json()
 
     # fetch the file data from firestore
@@ -277,7 +275,7 @@ def update_file():
 
     # exceptions
     if not file_ref.get().exists:
-        return Response(
+        return NotFound(
             response="The file with the given filename was not found",
             status=404,
         )
@@ -287,9 +285,7 @@ def update_file():
 
     # Only the author have access to update the file
     if author_uid != file["author"]:
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     # if filename in the request update it
     if "filename" in data:
@@ -300,11 +296,9 @@ def update_file():
         try:
             bucket = storage.bucket()
             blob = bucket.blob(data["file_id"])
-            blob.upload_from_string(
-                data["file"], content_type="application/pdf"
-            )
+            blob.upload_from_string(data["file"], content_type="application/pdf")
         except:
-            raise BadRequest("cannot update to storage")
+            raise InternalServerError("cannot update to storage")
 
     return Response("File Updated", 200)
 
@@ -340,22 +334,20 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    reviewer: str = decoded_token["uid"]
+    reviewer: str = decoded_token.get("uid")
     data: dict = request.get_json()
 
     # exceptions
-    if data["decision"] < 3 or data["decision"] > 5:
+    if data.get("decision") < 3 or data.get("decision") > 5:
         raise BadRequest("Unsupported decision type.")
 
     # fetch the file data from firestore
-    file_ref = db.collection(u"Files").document(data["file_id"])
-    file = file_ref.get().to_dict()
+    file_ref = db.collection(u"Files").document(data.get("file_id"))
+    file: dict = file_ref.get().to_dict()
 
     # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != file["reviewer"] and decoded_token.get("admin") != True:
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
+    if reviewer != file.get("reviewer") and decoded_token.get("admin") != True:
+        raise Unauthorized("The user is not authorized to retrieve this content")
 
     if "comment" in data:
         file_ref.update({u"comment": data["comment"]})
