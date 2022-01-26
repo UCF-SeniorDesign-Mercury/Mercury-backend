@@ -9,6 +9,9 @@
         get_event()
         get_recent_events()
         get_next_event_page()
+        register_event()
+        update_event()
+        change_status()
 """
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
@@ -196,7 +199,7 @@ def update_event() -> Response:
     return Response(response="Event updated", status=200)
 
 
-@events.get("/get_event/<event_id>/")
+@events.get("/get_event/<event_id>")
 @check_token
 def get_event(event_id: str) -> Response:
     """

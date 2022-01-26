@@ -3,9 +3,11 @@
     src.api.files
     ~~~~~~~~~~~~~
     Functions:
-        add_file()
+        change_status()
         delete_file()
         get_file()
+        update_file()
+        upload_file()
 """
 from flask import Response, request
 from src.common.decorators import check_token
@@ -26,7 +28,7 @@ from src.api import Blueprint
 files: Blueprint = Blueprint("files", __name__)
 
 
-@files.post("/upload_file/")
+@files.post("/upload_file")
 @check_token
 def upload_file() -> Response:
     """
@@ -102,7 +104,7 @@ def upload_file() -> Response:
     return Response(response="File added", status=201)
 
 
-@files.get("/get_file/<file_id>/")
+@files.get("/get_file/<file_id>")
 @check_token
 def get_file(file_id: str) -> Response:
     """
@@ -166,7 +168,7 @@ def get_file(file_id: str) -> Response:
     return jsonify(res), 200
 
 
-@files.delete("/delete_file/<file_id>/")
+@files.delete("/delete_file/<file_id>")
 @check_token
 def delete_file(file_id: str) -> Response:
     """
@@ -235,7 +237,7 @@ def delete_file(file_id: str) -> Response:
     return Response(response="File deleted", status=200)
 
 
-@files.put("/update_file/")
+@files.put("/update_file")
 @check_token
 def update_file():
     """
@@ -307,7 +309,7 @@ def update_file():
     return Response("File Updated", 200)
 
 
-@files.put("/change_status/")
+@files.put("/change_status")
 @check_token
 def change_status():
     """
