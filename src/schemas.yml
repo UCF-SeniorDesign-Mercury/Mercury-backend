@@ -4,9 +4,12 @@ EventData:
     title:
       type: string
       example: Coffe time
-    date:
-      type: date
-      example: YYYY-MM-DD
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
     organizer:
       type: string
       example: The organier name
@@ -23,9 +26,12 @@ UpdateEvent:
     id:
       type: string
       example: The event id here
-    date:
-      type: date
-      example: YYYY-MM-DD
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
     organizer:
       type: string
       example: The organier name
@@ -48,9 +54,12 @@ Event:
     title:
       type: string
       example: Coffe time
-    date:
-      type: date
-      example: YYYY-MM-DD
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
     organizer:
       type: string
       example: The organier name

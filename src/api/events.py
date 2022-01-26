@@ -16,13 +16,14 @@ from uuid import uuid4
 
 from src.api import Blueprint
 from src.common.database import db
-from src.common.decorators import check_token
+from src.common.decorators import admin_only, check_token
 
 events: Blueprint = Blueprint("events", __name__)
 
 
 @events.post("/create_event")
 @check_token
+@admin_only
 def create_event() -> Response:
     """
     Creates an event.
@@ -75,6 +76,8 @@ def create_event() -> Response:
 
 
 @events.delete("/delete_event/<event_id>")
+@check_token
+# @admin_only
 def delete_event(event_id: str) -> Response:
     """
     Delete an event from database.
@@ -115,11 +118,12 @@ def delete_event(event_id: str) -> Response:
     # if enevt does not exists
     if not event_ref.get().exists:
         return Response("The event not found", 404)
-    # Only the event organisor or the admin could delete the event
-    if event["author"] != uid and decoded_token.get("admin") != True:
-        return Response(
-            "The user is not authorized to retrieve this content", 401
-        )
+
+    # # Future function: Only the event organisor or the admin could delete the event
+    # if event["author"] != uid and decoded_token.get("admin") != True:
+    #     return Response(
+    #         "The user is not authorized to retrieve this content", 401
+    #     )
 
     event_ref.delete()
 
@@ -128,6 +132,7 @@ def delete_event(event_id: str) -> Response:
 
 @events.put("/update_event")
 @check_token
+@admin_only
 def update_event() -> Response:
     """
     Updates an event that has already been created.
@@ -171,11 +176,12 @@ def update_event() -> Response:
     # if enevt does not exists
     if not event_ref.get().exists:
         return Response("The event not found", 404)
-    # Only the event organisor or the admin could delete the event
-    if event["author"] != uid and decoded_token.get("admin") != True:
-        return Response(
-            "The user is not authorized to retrieve this content", 401
-        )
+
+    # # Future FUnction: Only the event organisor or the admin could delete the event
+    # if event["author"] != uid and decoded_token.get("admin") != True:
+    #     return Response(
+    #         "The user is not authorized to retrieve this content", 401
+    #     )
 
     # update event by given paramter
     if "date" in event:
@@ -395,7 +401,8 @@ def register_event(event_id: str) -> Response:
     # Only the event organisor or the admin could delete the event
     if event["status"] > 1:
         return Response("The event close for register", 403)
-    # candidates_filter nice to have
+
+    # Future function: candidates_filter nice to have
 
     # add the user uid to the participators array
     event_ref.update({"participators": firestore.ArrayUnion([uid])})
@@ -459,6 +466,7 @@ def cancel_register(event_id: str) -> Response:
 
 @events.put("/change_status")
 @check_token
+@admin_only
 def change_status():
     """
     Change the status of an event from Firebase Storage.
@@ -503,11 +511,11 @@ def change_status():
     event_ref = db.collection(u"Scheduled-Events").document(data["event_id"])
     event = event_ref.get().to_dict()
 
-    # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != event["author"] and decoded_token.get("admin") != True:
-        raise Response(
-            "The user is not authorized to retrieve this content", 401
-        )
+    # # Future function: Only the reviewer, and admin have access to change the status of the file
+    # if reviewer != event["author"] and decoded_token.get("admin") != True:
+    #     raise Response(
+    #         "The user is not authorized to retrieve this content", 401
+    #     )
 
     event_ref.update({u"status": data["decision"]})
 
