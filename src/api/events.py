@@ -20,6 +20,7 @@ from werkzeug.exceptions import (
     BadRequest,
     NotFound,
     Forbidden,
+    InternalServerError,
     Unauthorized,
     UnsupportedMediaType,
 )
@@ -55,12 +56,18 @@ def create_event() -> Response:
         description: Created event object
         required: true
     responses:
-        201:
+        200:
             description: Event created
         400:
-            description: Failed to add an event
+            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -82,7 +89,7 @@ def create_event() -> Response:
     db.collection("Scheduled-Events").document(data["id"]).set(data)
 
     # return Response 201 for successfully creating a new resource
-    return Response(response="Event added", status=201)
+    return Response(response="Event added", status=200)
 
 
 @events.delete("/delete_event/<event_id>")
@@ -110,10 +117,16 @@ def delete_event(event_id: str) -> Response:
     responses:
         200:
             description: Event deleted
+        400:
+            description: Bad request
         401:
-            description: The user is not authorized to retrieve this content
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The event not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -127,7 +140,7 @@ def delete_event(event_id: str) -> Response:
 
     # if event does not exists
     if not event_ref.get().exists:
-        return NotFound("The event not found", 404)
+        return NotFound("The event not found")
 
     # # Future function: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:
@@ -166,10 +179,16 @@ def update_event() -> Response:
     responses:
         200:
             description: Event updated
+        400:
+            description: Bad request
         401:
-            description: The user is not authorized to retrieve this content
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The event not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -185,7 +204,7 @@ def update_event() -> Response:
 
     # if event does not exists
     if not event_ref.get().exists:
-        return NotFound("The event not found", 404)
+        return NotFound("The event not found")
 
     # # Future FUnction: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:
@@ -232,8 +251,14 @@ def get_event(event_id: str) -> Response:
                 application/json:
                     schema:
                         $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -247,7 +272,7 @@ def get_event(event_id: str) -> Response:
 
     # event not found exception
     if not doc.exists:
-        return NotFound("Event no longer exist", 404)
+        return NotFound("Event no longer exist")
 
     return jsonify(doc.to_dict()), 200
 
@@ -275,8 +300,14 @@ def get_recent_events() -> Response:
                         type: array
                         items:
                             $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -300,7 +331,7 @@ def get_recent_events() -> Response:
         return jsonify(events), 200
 
     except:
-        return Response(response="Failed event retrieved", status=400)
+        return InternalServerError(response="Failed event retrieved")
 
 
 @events.get("/get_next_event_page")
@@ -331,8 +362,16 @@ def get_next_event_page() -> Response:
                         type: array
                         items:
                             $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: Failed event retrieved
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     try:
         document: list = []
@@ -343,7 +382,9 @@ def get_next_event_page() -> Response:
 
         # Get reference to document with that ID
         last_ref = (
-            db.collection("Scheduled-Events").where("id", "==", event_id).stream()
+            db.collection("Scheduled-Events")
+            .where("id", "==", event_id)
+            .stream()
         )
         for doc in last_ref:
             document.append(doc.to_dict())
@@ -362,7 +403,7 @@ def get_next_event_page() -> Response:
         return jsonify(events), 200
 
     except:
-        return Response(response="Failed event retrieved", status=400)
+        return InternalServerError("Failed event retrieved")
 
 
 @events.put("/register_event/<event_id>")
@@ -388,10 +429,16 @@ def register_event(event_id: str) -> Response:
     responses:
         200:
             description: Registered for the event
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The event no longer exists
-        403:
-            description: The event close for register
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -405,10 +452,10 @@ def register_event(event_id: str) -> Response:
 
     # if enevt does not exists
     if not event_ref.get().exists:
-        return NotFound("The event no longer exists", 404)
+        return NotFound("The event no longer exists")
     # Only the event organisor or the admin could delete the event
     if event["status"] > 1:
-        return Forbidden("The event is closed for registration", 403)
+        return Forbidden("The event is closed for registration")
 
     # Future function: candidates_filter nice to have
 
@@ -445,8 +492,16 @@ def cancel_register(event_id: str) -> Response:
     responses:
         200:
             description: Cancel register for the event
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The event no longer exists
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
     """
     # Check user access levels
     # Decode token to obtain user's firebase id
@@ -460,7 +515,7 @@ def cancel_register(event_id: str) -> Response:
 
     # if enevt does not exists
     if not event_ref.get().exists:
-        return NotFound("The event no longer exists", 404)
+        return NotFound("The event no longer exists")
 
     # add the user uid to the participators array
     event_ref.update({"participators": firestore.ArrayRemove([uid])})
@@ -497,11 +552,13 @@ def change_status():
         200:
             description: Status changed
         400:
-            description: Unsupported decision type
+            description: Bad request
         401:
-            description: The user is not authorized to retrieve this content
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -513,7 +570,7 @@ def change_status():
 
     # exceptions
     if data["decision"] < 1 or data["decision"] > 6:
-        return BadRequest("Unsupported decision type", 400)
+        return BadRequest("Unsupported decision type")
 
     # fetch the file data from firestore
     event_ref = db.collection(u"Scheduled-Events").document(data["event_id"])

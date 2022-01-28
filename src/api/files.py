@@ -56,8 +56,10 @@ def upload_file() -> Response:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
         415:
-            description: Unsupported media type. Provide a valid PDF
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -132,8 +134,14 @@ def get_file(file_id: str) -> Response:
                 application/json:
                     schema:
                         '#/components/schemas/File'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -195,8 +203,14 @@ def delete_file(file_id: str) -> Response:
     responses:
         200:
             description: File deleted
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -209,7 +223,7 @@ def delete_file(file_id: str) -> Response:
     data_ref = db.collection(u"Files").document(file_id)
 
     if not data_ref.get().exists:
-        return NotFound("The file not found", 404)
+        return NotFound("The file not found")
 
     data: dict = data_ref.get().to_dict()
     doc_ref = db.collection(u"User").document(uid).get()
@@ -264,8 +278,14 @@ def update_file():
     responses:
         200:
             description: File Updated
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -281,10 +301,7 @@ def update_file():
 
     # exceptions
     if not file_ref.get().exists:
-        return NotFound(
-            response="The file with the given filename was not found",
-            status=404,
-        )
+        return NotFound("The file with the given filename was not found")
 
     if file["status"] < 0 or file["status"] > 3:
         raise BadRequest("Files is not allow to change after decision made")
@@ -336,8 +353,14 @@ def change_status():
     responses:
         200:
             description: Status changed
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         404:
-            description: The file with the given filename was not found
+            description: NotFound
+        415:
+            description: Unsupported media type.
         500:
             description: Internal API Error
     """
