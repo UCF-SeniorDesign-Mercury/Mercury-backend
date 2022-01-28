@@ -1,18 +1,41 @@
 EventData:
-  id: Event Data
   type: object
   properties:
-    eventTitle:
+    title:
       type: string
-      example: Coffee meeting
-    eventOrganizer:
+      example: Coffe time
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    organizer:
       type: string
-      example: Your employer
-    eventDate:
+      example: The organizer name
+    description:
       type: string
-      format: date
-      example: YYYY-MM-DD
-    eventDescription:
+      example: Drink coffee with your teammates
+
+UpdateEvent:
+  type: object
+  properties:
+    title:
+      type: string
+      example: Coffe time
+    id:
+      type: string
+      example: The event id here
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    organizer:
+      type: string
+      example: The organier name
+    description:
       type: string
       example: Drink coffee with your teammates
 
@@ -22,14 +45,30 @@ Event:
     author:
       type: string
       example: this is the author uid
-    data:
-      $ref: "#/components/schemas/EventData"
     id:
       type: string
       example: this is the event id
     timestamp:
       type: timestamp
       example: yy-MM-dd SSS HH:mm:ss
+    title:
+      type: string
+      example: Coffe time
+    starttime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
+    organizer:
+      type: string
+      example: The organier name
+    description:
+      type: string
+      example: Drink coffee with your teammates
+    participants:
+      type: array
+      example: ["001", "002", "003", "007"]
 
 Role:
   type: object
@@ -55,31 +94,37 @@ File:
   id: File
   type: object
   properties:
-    id:
-      type: string
-      example: db6dbef1-154b-4d34-9956-d718d524803b
     filename:
       type: string
       example: 1380_Blank.pdf
-    status:
-      type: integer
-      minimum: 1
-      maximum: 5
-      example: 1
-      description: Requested = 1, Pending = 2, Review submitted = 3, Approved = 4, Rejected = 5
-    author:
-      type: string
-      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+      required: true
     reviewer:
       type: string
+      required: true
       example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
+
+UpdateFile:
+  id: UpdateFile
+  type: object
+  properties:
+    file_id:
+      type: string
+      example: f15bf339-7ac2-4f39-a5a8-a292fc34c241
+      required: true
+    filename:
+      type: string
+      example: 1380_Blank.pdf
     file:
       type: string
       format: byte
       description: A file encoded in Base64
 
-Status:
-  id: Status
+FileStatus:
   type: object
   properties:
     file_id:
@@ -97,3 +142,17 @@ Status:
       required: false
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
+
+EventStatus:
+  type: object
+  properties:
+    event_id:
+      type: string
+      required: true
+      description: this is the event id
+      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
+    decision:
+      type: integer
+      required: true
+      decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
+      example: 3

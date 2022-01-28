@@ -7,7 +7,8 @@
         admin_only()
 """
 from functools import wraps
-from flask import json, request, jsonify
+from src.common.database import db
+from flask import request
 from firebase_admin import auth
 from werkzeug.exceptions import Unauthorized
 import os
@@ -61,8 +62,15 @@ def admin_only(f):
 
         token: str = request.headers["Authorization"]
         decoded_token: dict = auth.verify_id_token(token)
+        uid: str = decoded_token.get("uid")
+        doc_ref = db.collection(u"User").document(uid).get()
+        doc: dict = doc_ref.to_dict()
 
-        if decoded_token["admin"] is False:
+        # if the user not exists
+        if not doc_ref.exists:
+            raise Unauthorized("User no longer exists")
+        # if the user is not admin role
+        if doc["Role"] != "admin":
             raise Unauthorized("You don't have the access rights")
 
         return f(*args, **kwargs)
