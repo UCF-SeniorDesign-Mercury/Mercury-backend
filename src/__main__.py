@@ -11,7 +11,6 @@ from src.api.roles import roles
 from src.api.events import events
 from src.api.files import files
 from flask import Flask, jsonify
-from flask_cors import CORS
 from flasgger import Swagger
 from os import path, environ
 import yaml
@@ -20,7 +19,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
 
 schemapath = path.join(path.abspath(path.dirname(__file__)), "schemas.yml")
 schemastream = open(schemapath, "r")
