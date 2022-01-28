@@ -56,7 +56,7 @@ def create_event() -> Response:
         description: Created event object
         required: true
     responses:
-        200:
+        201:
             description: Event created
         400:
             description: Bad request
@@ -89,7 +89,7 @@ def create_event() -> Response:
     db.collection("Scheduled-Events").document(data["id"]).set(data)
 
     # return Response 201 for successfully creating a new resource
-    return Response(response="Event added", status=200)
+    return Response(response="Event added", status=201)
 
 
 @events.delete("/delete_event/<event_id>")
