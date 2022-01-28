@@ -459,8 +459,8 @@ def register_event(event_id: str) -> Response:
 
     # Future function: candidates_filter nice to have
 
-    # add the user uid to the participators array
-    event_ref.update({"participators": firestore.ArrayUnion([uid])})
+    # add the user uid to the participants array
+    event_ref.update({"participants": firestore.ArrayUnion([uid])})
 
     # update the user table
     user_ref = db.collection(u"User").document(uid)
@@ -517,8 +517,8 @@ def cancel_register(event_id: str) -> Response:
     if not event_ref.get().exists:
         return NotFound("The event no longer exists")
 
-    # add the user uid to the participators array
-    event_ref.update({"participators": firestore.ArrayRemove([uid])})
+    # add the user uid to the participants array
+    event_ref.update({"participants": firestore.ArrayRemove([uid])})
 
     # update the user table
     user_ref = db.collection(u"User").document(uid)
