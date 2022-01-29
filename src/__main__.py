@@ -12,6 +12,7 @@ from src.api.events import events
 from src.api.files import files
 from flask import Flask, jsonify
 from flasgger import Swagger
+from flask_cors import CORS
 from os import path, environ
 import yaml
 from dotenv import load_dotenv
@@ -38,7 +39,7 @@ swagger_specs = {
     },
     "servers": [
         {
-            "url": "http://localhost:5000",
+            "url": "*",
             "description": "Local Development server",
         }
     ],
@@ -53,6 +54,7 @@ swagger = Swagger(app, template=swagger_specs)
 app.register_blueprint(events, url_prefix="/events")
 app.register_blueprint(roles, url_prefix="/roles")
 app.register_blueprint(files, url_prefix="/files")
+CORS(app)
 
 
 @app.errorhandler(404)
@@ -61,5 +63,6 @@ def page_not_found(e) -> Response:
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(environ.get("PORT", 8080)), debug=True)
+    app.run(debug=True)
+    # app.run(host="0.0.0.0", port=int(environ.get("PORT", 8080)), debug=True)
     # app.run(host="localhost", port=int(environ.get("PORT", 5000)), debug=True)
