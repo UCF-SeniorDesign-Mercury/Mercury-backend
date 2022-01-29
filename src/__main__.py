@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 schemapath = path.join(path.abspath(path.dirname(__file__)), "schemas.yml")
 schemastream = open(schemapath, "r")
@@ -39,7 +40,7 @@ swagger_specs = {
     },
     "servers": [
         {
-            "url": "*",
+            "url": "http://localhost:5000",
             "description": "Local Development server",
         }
     ],
@@ -54,7 +55,6 @@ swagger = Swagger(app, template=swagger_specs)
 app.register_blueprint(events, url_prefix="/events")
 app.register_blueprint(roles, url_prefix="/roles")
 app.register_blueprint(files, url_prefix="/files")
-CORS(app)
 
 
 @app.errorhandler(404)
