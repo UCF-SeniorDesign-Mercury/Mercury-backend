@@ -8,6 +8,8 @@
         get_file()
         update_file()
         upload_file()
+        get_user_files()
+        get_next_user_files_page()
 """
 from inspect import signature
 from typing import Dict, List
