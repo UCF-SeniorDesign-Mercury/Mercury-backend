@@ -11,8 +11,6 @@
         get_user_files()
         get_next_user_files_page()
 """
-from inspect import signature
-from typing import Dict, List
 from flask import Response, request
 from src.common.decorators import check_token
 from werkzeug.exceptions import (
@@ -117,17 +115,15 @@ def upload_file() -> Response:
     except:
         raise InternalServerError("Could not save pdf")
 
-    try:
-        # save signature image to firebase storage
-        blob = bucket.blob(signature_id)
-        blob.upload_from_string(data.get("signature"), content_type="image")
-    except:
-        raise InternalServerError("Could not save signature")
-
-    # update usertable
-    user_ref.update({u"files": firestore.ArrayUnion([file_id])})
     # update signature
-    user_ref.update({u"signature": signature_id})
+    if data.get("signature") != None:
+        try:
+            # save signature image to firebase storage
+            blob = bucket.blob(signature_id)
+            blob.upload_from_string(data.get("signature"), content_type="image")
+        except:
+            raise InternalServerError("Could not save signature")
+        user_ref.update({u"signature": signature_id})
 
     return Response(response="File added", status=201)
 
@@ -199,7 +195,7 @@ def get_file(file_id: str) -> Response:
     if (
         uid != res.get("reviewer")
         and uid != res.get("author")
-        and user.get("Role") != "admin"
+        and user.get("role") != "admin"
     ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
@@ -207,6 +203,7 @@ def get_file(file_id: str) -> Response:
 
     # download the pdf file and add it to the file data
     blob = bucket.blob(user.get("signature"))
+
     if not blob.exists():
         return NotFound("The user's signature was not found.")
     signature = blob.download_as_bytes()
@@ -267,13 +264,13 @@ def delete_file(file_id: str) -> Response:
     user_ref = db.collection(u"User").document(uid)
     if user_ref.get().exists == False:
         raise NotFound("The user not found")
-    user: dict = user_ref.to_dict()
+    user: dict = user_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
     if (
         uid != data.get("reviewer")
         and uid != data.get("author")
-        and user.get("Role") != "admin"
+        and user.get("role") != "admin"
     ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
@@ -288,9 +285,6 @@ def delete_file(file_id: str) -> Response:
 
     # delete the data from firesotre
     data_ref.delete()
-
-    # update the user table
-    user_ref.update({u"files": firestore.ArrayRemove([file_id])})
 
     return Response(response="File deleted", status=200)
 
@@ -362,23 +356,28 @@ def update_file():
 
     # if filename in the request update it
     if "filename" in data:
-        file_ref.update({u"filename": data["filename"]})
+        if data.get("filename") and splitext(data.get("filename"))[1] != ".pdf":
+            raise UnsupportedMediaType(
+                "Unsupported media type. The endpoint only accepts PDFs"
+            )
+        file_ref.update({u"filename": data.get("filename")})
+
+    # save pdf to firestore storage
     bucket = storage.bucket()
     if "file" in data:
-        # save pdf to firestore storage
         try:
-            blob = bucket.blob(data["file_id"])
+            blob = bucket.blob(data.get("file_id"))
             blob.upload_from_string(
-                data["file"], content_type="application/pdf"
+                data.get("file"), content_type="application/pdf"
             )
         except:
             raise InternalServerError("cannot update pdf to storage")
 
+    # save pdf to firestore storage
     if "signature" in data:
-        # save pdf to firestore storage
         try:
             blob = bucket.blob(user.get("signature"))
-            blob.upload_from_string(data["signature"], content_type="image")
+            blob.upload_from_string(data.get("signature"), content_type="image")
         except:
             raise InternalServerError("cannot update signature to storage")
 
@@ -430,26 +429,26 @@ def change_status():
         raise BadRequest("Unsupported decision type.")
 
     # fetch the file data from firestore
-    file_ref = db.collection(u"Files").document(data.get("file_id"))
+    file_ref = db.collection("Files").document(data.get("file_id"))
     if file_ref.get().exists == False:
         raise NotFound("The file not found")
     file: dict = file_ref.get().to_dict()
 
-    user_ref = db.collection(u"User").document(reviewer).get()
+    user_ref = db.collection("User").document(reviewer).get()
     if user_ref.exists == False:
         raise NotFound("The user not found")
     user: dict = user_ref.to_dict()
 
     # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != file.get("reviewer") and user.get("Role") != "admin":
+    if reviewer != file.get("reviewer") and user.get("role") != "admin":
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
     if "comment" in data:
-        file_ref.update({u"comment": data["comment"]})
+        file_ref.update({u"comment": data.get("comment")})
 
-    file_ref.update({u"status": data["decision"]})
+    file_ref.update({u"status": data.get("decision")})
 
     return Response("Status changed", 200)
 
@@ -494,7 +493,7 @@ def get_user_files() -> Response:
     uid: str = decoded_token.get("uid")
 
     file_docs: list = (
-        db.collection(u"Files")
+        db.collection("Files")
         .order_by("timestamp", direction=firestore.Query.DESCENDING)
         .where("author", "==", uid)
         .limit(10)
