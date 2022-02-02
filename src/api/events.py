@@ -204,7 +204,7 @@ def update_event() -> Response:
 
     # if event does not exists
     if not event_ref.get().exists:
-        return NotFound("The event not found")
+        return NotFound("The event was not found")
 
     # # Future FUnction: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:

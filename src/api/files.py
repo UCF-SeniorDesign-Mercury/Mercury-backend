@@ -256,14 +256,14 @@ def delete_file(file_id: str) -> Response:
     data_ref = db.collection(u"Files").document(file_id)
 
     if not data_ref.get().exists:
-        return NotFound("The file not found")
+        return NotFound("The file was not found")
 
     data: dict = data_ref.get().to_dict()
 
     # get the user date from the user table
     user_ref = db.collection(u"User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
@@ -338,7 +338,7 @@ def update_file():
     # get the user table
     user_ref = db.collection(u"User").document(author_uid).get()
     if user_ref.exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.to_dict()
 
     # exceptions
@@ -578,4 +578,4 @@ def get_next_event_page() -> Response:
         return jsonify(files), 200
 
     except:
-        return InternalServerError("Failed event retrieved")
+        return InternalServerError("Event retrieval failed")
