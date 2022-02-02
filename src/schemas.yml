@@ -107,6 +107,36 @@ File:
       format: byte
       required: true
       description: A file encoded in Base64
+    signature:
+      type: string
+      format: base64
+      required: false
+      description: The user signature
+
+RecnetFile:
+  type: object
+  properties:
+    author:
+      type: string
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    filename:
+      type: string
+      example: 1380_Blank.pdf
+    reviewer:
+      type: string
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    id:
+      type: string
+      description: the file uid
+    comment:
+      type: string
+      description: The user signature
+    status:
+      type: integer
+      description: resubmit = 3, Approved = 4, Rejected = 5
+    timestamp:
+      type: timestamp
+      example: yy-MM-dd SSS HH:mm:ss
 
 UpdateFile:
   id: UpdateFile
@@ -123,6 +153,11 @@ UpdateFile:
       type: string
       format: byte
       description: A file encoded in Base64
+    signature:
+      type: string
+      format: base64
+      required: false
+      description: The user signature
 
 FileStatus:
   type: object

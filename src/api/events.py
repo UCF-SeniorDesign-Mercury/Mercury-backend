@@ -204,7 +204,7 @@ def update_event() -> Response:
 
     # if event does not exists
     if not event_ref.get().exists:
-        return NotFound("The event not found")
+        return NotFound("The event was not found")
 
     # # Future FUnction: Only the event organisor or the admin could delete the event
     # if event["author"] != uid and decoded_token.get("admin") != True:
@@ -382,9 +382,7 @@ def get_next_event_page() -> Response:
 
         # Get reference to document with that ID
         last_ref = (
-            db.collection("Scheduled-Events")
-            .where("id", "==", event_id)
-            .stream()
+            db.collection("Scheduled-Events").where("id", "==", event_id).stream()
         )
         for doc in last_ref:
             document.append(doc.to_dict())
