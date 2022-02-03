@@ -382,7 +382,9 @@ def get_next_event_page() -> Response:
 
         # Get reference to document with that ID
         last_ref = (
-            db.collection("Scheduled-Events").where("id", "==", event_id).stream()
+            db.collection("Scheduled-Events")
+            .where("id", "==", event_id)
+            .stream()
         )
         for doc in last_ref:
             document.append(doc.to_dict())
