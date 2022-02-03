@@ -1,16 +1,19 @@
 # Mercury Backend
 
-This backend is created using Flask and is still in development and for local testing. 
+This backend is created using Flask and is still in development and for local testing.
 
 ## Setup
+
 **Installing virtual environment**
 
 On macOS and Linux
+
 ```
 python3 -m pip install --user virtualenv
 ```
 
 on Windows
+
 ```
 py -m pip install --user virtualenv
 ```
@@ -18,11 +21,13 @@ py -m pip install --user virtualenv
 **Creating a virtual environment**
 
 On macOS and Linux
+
 ```
 python3 -m venv env
 ```
 
 on Windows
+
 ```
 py -m venv env
 ```
@@ -30,21 +35,27 @@ py -m venv env
 **Activating a virtual environment**
 
 On macOS and Linux
+
 ```
 source env/bin/activate
 ```
 
 on Windows
+
 ```
 .\env\Scripts\activate
 ```
 
 **Installing the packages**
+
+The project requires poetry (version >= 1.1.12). Installation instructions: [_link_](https://python-poetry.org/docs/#installation)
+
 ```
-pip3 install -r requirements.txt
+poetry install
 ```
 
 **Running the application**
+
 ```
 python -m src run
 ```
@@ -61,4 +72,3 @@ Refer to this [video](https://www.youtube.com/watch?v=Bg9r_yLk7VY&list=LL&index=
 
 **Firebase project**
 Add keys from `key.json` to the `.env` file.
-

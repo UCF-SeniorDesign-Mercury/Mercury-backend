@@ -1,6 +1,0 @@
--r requirements.txt
-mock-firestore==0.10.0
-pytest
-coverage
-flask-testing
-black
