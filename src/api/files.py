@@ -74,7 +74,7 @@ def upload_file() -> Response:
     data: dict = request.get_json()
 
     # get user table
-    user_ref = db.collection(u"User").document(uid)
+    user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
         raise NotFound("The user not found")
     user: dict = user_ref.get().to_dict()
@@ -105,7 +105,7 @@ def upload_file() -> Response:
     entry["status"] = 1
     entry["reviewer"] = data["reviewer"]
     entry["comment"] = ""
-    db.collection(u"Files").document(file_id).set(entry)
+    db.collection("Files").document(file_id).set(entry)
 
     try:
         # save pdf to firestore storage
@@ -123,7 +123,7 @@ def upload_file() -> Response:
             blob.upload_from_string(data.get("signature"), content_type="image")
         except:
             raise InternalServerError("Could not save signature")
-        user_ref.update({u"signature": signature_id})
+        user_ref.update({"signature": signature_id})
 
     return Response(response="File added", status=201)
 
@@ -180,13 +180,13 @@ def get_file(file_id: str) -> Response:
 
     # download the pdf file and add it to the file data
     file = blob.download_as_bytes()
-    docs = db.collection(u"Files").where("id", "==", file_id).limit(1).stream()
+    docs = db.collection("Files").where("id", "==", file_id).limit(1).stream()
     for doc in docs:
         res = doc.to_dict()
     res["file"] = file.decode("utf-8")
 
     # get the user table
-    user_ref = db.collection(u"User").document(uid).get()
+    user_ref = db.collection("User").document(uid).get()
     if user_ref.exists == False:
         raise NotFound("The user not found")
     user: dict = user_ref.to_dict()
@@ -253,7 +253,7 @@ def delete_file(file_id: str) -> Response:
     uid: str = decoded_token.get("uid")
 
     # get file data from firestore
-    data_ref = db.collection(u"Files").document(file_id)
+    data_ref = db.collection("Files").document(file_id)
 
     if not data_ref.get().exists:
         return NotFound("The file was not found")
@@ -261,7 +261,7 @@ def delete_file(file_id: str) -> Response:
     data: dict = data_ref.get().to_dict()
 
     # get the user date from the user table
-    user_ref = db.collection(u"User").document(uid)
+    user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
         raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
@@ -330,13 +330,13 @@ def update_file():
     data: dict = request.get_json()
 
     # fetch the file data from firestore
-    file_ref = db.collection(u"Files").document(data["file_id"])
+    file_ref = db.collection("Files").document(data["file_id"])
     if file_ref.get().exists == False:
         raise NotFound("The file not found")
     file = file_ref.get().to_dict()
 
     # get the user table
-    user_ref = db.collection(u"User").document(author_uid).get()
+    user_ref = db.collection("User").document(author_uid).get()
     if user_ref.exists == False:
         raise NotFound("The user was not found")
     user: dict = user_ref.to_dict()
@@ -360,7 +360,7 @@ def update_file():
             raise UnsupportedMediaType(
                 "Unsupported media type. The endpoint only accepts PDFs"
             )
-        file_ref.update({u"filename": data.get("filename")})
+        file_ref.update({"filename": data.get("filename")})
 
     # save pdf to firestore storage
     bucket = storage.bucket()
@@ -446,9 +446,9 @@ def change_status():
         )
 
     if "comment" in data:
-        file_ref.update({u"comment": data.get("comment")})
+        file_ref.update({"comment": data.get("comment")})
 
-    file_ref.update({u"status": data.get("decision")})
+    file_ref.update({"status": data.get("decision")})
 
     return Response("Status changed", 200)
 
@@ -468,6 +468,16 @@ def get_user_files() -> Response:
           schema:
             type: string
           required: true
+        - in: header
+          name: status
+          schema:
+            type: integer
+          required: false
+        - in: header
+          name: page_limit
+          schema:
+            type: integer
+          required: false
     responses:
         200:
             content:
@@ -491,14 +501,30 @@ def get_user_files() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    page_limit: int = 10
 
-    file_docs: list = (
-        db.collection("Files")
-        .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .where("author", "==", uid)
-        .limit(10)
-        .stream()
-    )
+    if "page_limit" in request.headers:
+        page_limit = int(request.headers["page_limit"])
+
+    file_docs: list = []
+
+    if "status" in request.headers:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", int(request.headers["status"]))
+            .limit(page_limit)
+            .stream()
+        )
+    else:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .limit(page_limit)
+            .stream()
+        )
 
     files: list = []
     for file in file_docs:
@@ -523,10 +549,20 @@ def get_next_event_page() -> Response:
             type: string
           required: true
         - in: header
+          name: page_limit
+          schema:
+            type: integer
+          required: false
+        - in: header
           name: ID
           schema:
             type: string
           required: true
+        - in: header
+          name: status
+          schema:
+            type: integer
+          required: false
     responses:
         200:
             content:
@@ -551,31 +587,43 @@ def get_next_event_page() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    try:
-        document: list = []
-        files: list = []
+    document: list = []
+    files: list = []
+    page_limit: int = 10
 
-        # Get ID of last event from client-side
-        file_id: str = request.headers["ID"]
+    # Get ID of last event from client-side
+    file_id: str = request.headers["ID"]
+    # Get the page limits from the front-end
+    if "page_limit" in request.headers:
+        page_limit = int(request.headers["page_limit"])
 
-        # Get reference to document with that ID
-        last_ref = db.collection("Files").where("id", "==", file_id).stream()
-        for doc in last_ref:
-            document.append(doc.to_dict())
+    # Get reference to document with that ID
+    last_ref = db.collection("Files").where("id", "==", file_id).stream()
+    for doc in last_ref:
+        document.append(doc.to_dict())
 
-        # Get the next batch of documents that come after the last document we received a reference to before
+    # Get the next batch of documents that come after the last document we received a reference to before
+    if "status" in request.headers:
+        docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", int(request.headers["status"]))
+            .start_after(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    else:
         docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
             .start_after(document[0])
-            .limit(10)
+            .limit(page_limit)
             .stream()
         )
-        for doc in docs:
-            files.append(doc.to_dict())
 
-        return jsonify(files), 200
+    for doc in docs:
+        files.append(doc.to_dict())
 
-    except:
-        return InternalServerError("Event retrieval failed")
+    return jsonify(files), 200
