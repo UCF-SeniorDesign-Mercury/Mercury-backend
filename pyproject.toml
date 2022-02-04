@@ -5,7 +5,7 @@ description = "The backend part of the Mercury project"
 authors = ["Dmitrii Golubenko <d.golubenko@knights.ucf.edu>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "3.8.1"
 attrs = "21.2.0"
 "backports.entry-points-selectable" = "1.1.1"
 CacheControl = "0.12.6"
