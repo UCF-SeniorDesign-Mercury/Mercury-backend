@@ -11,6 +11,7 @@
         get_user_files()
         get_next_user_files_page()
 """
+from email.policy import default
 from flask import Response, request
 from src.common.decorators import check_token
 from werkzeug.exceptions import (
@@ -468,12 +469,12 @@ def get_user_files() -> Response:
           schema:
             type: string
           required: true
-        - in: header
+        - in: query
           name: status
           schema:
             type: integer
           required: false
-        - in: header
+        - in: query
           name: page_limit
           schema:
             type: integer
@@ -501,19 +502,20 @@ def get_user_files() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    # the default page limits is 10
     page_limit: int = 10
 
-    if "page_limit" in request.headers:
-        page_limit = int(request.headers["page_limit"])
+    if "page_limit" in request.args:
+        page_limit = request.args.get("page_limit", default=10, type=int)
 
     file_docs: list = []
 
-    if "status" in request.headers:
+    if "status" in request.args:
         file_docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
-            .where("status", "==", int(request.headers["status"]))
+            .where("status", "==", int(request.args.get("status")))
             .limit(page_limit)
             .stream()
         )
@@ -548,17 +550,17 @@ def get_next_event_page() -> Response:
           schema:
             type: string
           required: true
-        - in: header
+        - in: query
           name: page_limit
           schema:
             type: integer
           required: false
-        - in: header
+        - in: query
           name: ID
           schema:
             type: string
           required: true
-        - in: header
+        - in: query
           name: status
           schema:
             type: integer
@@ -589,13 +591,14 @@ def get_next_event_page() -> Response:
 
     document: list = []
     files: list = []
+    # the default page limits is 10
     page_limit: int = 10
 
     # Get ID of last event from client-side
-    file_id: str = request.headers["ID"]
+    file_id: str = request.args.get("ID", type=str)
     # Get the page limits from the front-end
-    if "page_limit" in request.headers:
-        page_limit = int(request.headers["page_limit"])
+    if "page_limit" in request.args:
+        page_limit = request.args.get("page_limit", default=10, type=int)
 
     # Get reference to document with that ID
     last_ref = db.collection("Files").where("id", "==", file_id).stream()
@@ -603,12 +606,12 @@ def get_next_event_page() -> Response:
         document.append(doc.to_dict())
 
     # Get the next batch of documents that come after the last document we received a reference to before
-    if "status" in request.headers:
+    if "status" in request.args:
         docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
-            .where("status", "==", int(request.headers["status"]))
+            .where("status", "==", request.args.get("status", type=int))
             .start_after(document[0])
             .limit(page_limit)
             .stream()
