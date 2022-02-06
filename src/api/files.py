@@ -479,6 +479,11 @@ def get_user_files() -> Response:
           schema:
             type: integer
           required: false
+        - in: query
+          name: filename
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
@@ -509,13 +514,34 @@ def get_user_files() -> Response:
         page_limit = request.args.get("page_limit", default=10, type=int)
 
     file_docs: list = []
-
-    if "status" in request.args:
+    filename: str = request.args.get("filename", type=str)
+    status: int = request.args.get("status", type=int)
+    # both status and filename search
+    if "status" in request.args and "filename" in request.args:
         file_docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
-            .where("status", "==", int(request.args.get("status")))
+            .where("status", "==", status)
+            .where("filename", "==", filename)
+            .limit(page_limit)
+            .stream()
+        )
+    elif "status" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", status)
+            .limit(page_limit)
+            .stream()
+        )
+    elif "filename" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("filename", "==", filename)
             .limit(page_limit)
             .stream()
         )
@@ -565,6 +591,11 @@ def get_next_event_page() -> Response:
           schema:
             type: integer
           required: false
+        - in: query
+          name: filename
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
@@ -591,14 +622,13 @@ def get_next_event_page() -> Response:
 
     document: list = []
     files: list = []
-    # the default page limits is 10
-    page_limit: int = 10
 
     # Get ID of last event from client-side
     file_id: str = request.args.get("ID", type=str)
-    # Get the page limits from the front-end
-    if "page_limit" in request.args:
-        page_limit = request.args.get("page_limit", default=10, type=int)
+    # Get the page limits, filename, status from the front-end if exists
+    page_limit: int = request.args.get("page_limit", default=10, type=int)
+    filename: str = request.args.get("filename", type=str)
+    status: int = request.args.get("status", type=int)
 
     # Get reference to document with that ID
     last_ref = db.collection("Files").where("id", "==", file_id).stream()
@@ -606,18 +636,39 @@ def get_next_event_page() -> Response:
         document.append(doc.to_dict())
 
     # Get the next batch of documents that come after the last document we received a reference to before
-    if "status" in request.args:
-        docs = (
+    if "status" in request.args and "filename" in request.args:
+        file_docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
-            .where("status", "==", request.args.get("status", type=int))
+            .where("status", "==", status)
+            .where("filename", "==", filename)
+            .start_after(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    elif "status" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", status)
+            .start_after(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    elif "filename" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", uid)
+            .where("filename", "==", filename)
             .start_after(document[0])
             .limit(page_limit)
             .stream()
         )
     else:
-        docs = (
+        file_docs = (
             db.collection("Files")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
@@ -626,7 +677,7 @@ def get_next_event_page() -> Response:
             .stream()
         )
 
-    for doc in docs:
+    for doc in file_docs:
         files.append(doc.to_dict())
 
     return jsonify(files), 200
