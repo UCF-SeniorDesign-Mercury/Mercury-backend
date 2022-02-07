@@ -63,14 +63,14 @@ def admin_only(f):
         token: str = request.headers["Authorization"]
         decoded_token: dict = auth.verify_id_token(token)
         uid: str = decoded_token.get("uid")
-        doc_ref = db.collection(u"User").document(uid).get()
+        doc_ref = db.collection("User").document(uid).get()
         doc: dict = doc_ref.to_dict()
 
         # if the user not exists
         if not doc_ref.exists:
             raise Unauthorized("User no longer exists")
         # if the user is not admin role
-        if doc["Role"] != "admin":
+        if doc["role"] != "admin":
             raise Unauthorized("You don't have the access rights")
 
         return f(*args, **kwargs)

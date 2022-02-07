@@ -251,10 +251,31 @@ User:
     signature:
       type: string
       required: false
-    modules:
-      type: array
-      example: []
-      required: false
     user_status:
       type: integer
       required: true
+
+UserUpdate:
+  type: object
+  properties:
+    display_name:
+      type: string
+      required: false
+    phone:
+      type: string
+      required: false
+      example: 000-000-0000
+    email:
+      type: string
+      required: false
+      example: user@mail.com
+    profile_picture:
+      type: string
+      format: base64
+      required: false
+    description:
+      type: string
+      required: false
+    signature:
+      type: string
+      required: false
