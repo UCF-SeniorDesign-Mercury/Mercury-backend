@@ -191,3 +191,70 @@ EventStatus:
       required: true
       decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
       example: 3
+
+UserRegister:
+  type: object
+  properties:
+    display_name:
+      type: string
+      required: true
+    phone:
+      type: string
+      required: true
+      example: 000-000-0000
+    email:
+      type: string
+      required: true
+      example: user@mail.com
+    profile_picture:
+      type: string
+      format: base64
+      required: false
+    description:
+      type: string
+      required: false
+
+User:
+  type: object
+  properties:
+    display_name:
+      type: string
+      required: true
+    phone:
+      type: string
+      required: true
+      example: 000-000-0000
+    email:
+      type: string
+      required: true
+      example: user@mail.com
+    profile_picture:
+      type: string
+      format: base64
+      required: true
+    description:
+      type: string
+      required: false
+    role:
+      type: string
+      required: false
+    rank:
+      type: string
+      required: false
+    superior:
+      type: string
+      required: false
+    subordinates:
+      type: array
+      example: []
+      required: false
+    signature:
+      type: string
+      required: false
+    modules:
+      type: array
+      example: []
+      required: false
+    user_status:
+      type: integer
+      required: true
