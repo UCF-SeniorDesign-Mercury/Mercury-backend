@@ -10,13 +10,8 @@
 """
 from flask import Response, request
 from src.common.decorators import admin_only, check_token
-from werkzeug.exceptions import (
-    InternalServerError,
-    BadRequest,
-    NotFound,
-    Unauthorized,
-)
-from firebase_admin import storage, auth, firestore
+from werkzeug.exceptions import BadRequest, NotFound
+from firebase_admin import storage, auth
 from uuid import uuid4
 from flask import jsonify
 
