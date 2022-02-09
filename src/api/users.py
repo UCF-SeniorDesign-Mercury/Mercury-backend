@@ -12,6 +12,15 @@ from flask import Response, request
 from src.common.decorators import admin_only, check_token
 from werkzeug.exceptions import BadRequest, NotFound
 from firebase_admin import storage, auth
+from werkzeug.exceptions import (
+    InternalServerError,
+    BadRequest,
+    NotFound,
+    Unauthorized,
+    UnsupportedMediaType,
+)
+from firebase_admin.auth import UserRecord
+from google.cloud import firestore
 from uuid import uuid4
 from flask import jsonify
 
@@ -69,7 +78,7 @@ def register_user() -> Response:
     entry: dict = dict()
     entry["display_name"] = user_data.get("display_name")
     entry["phone"] = user_data.get("phone")
-    entry["email"] = user_data.get("email")
+    entry["email"] = decoded_token.get("email")
     entry["status"] = 1
 
     # if user upload the profile picture
@@ -296,3 +305,119 @@ def get_user() -> Response:
         user["profile_picture"] = profile_picture.decode("utf-8")
 
     return jsonify(user), 200
+
+
+@users.post("/assign_role")
+@check_token
+@admin_only
+def assign_role() -> Response:
+    """
+    Assign a role for newly registered user.
+    ---
+    tags:
+        - users
+    summary: Upon newly registering a user, they are granted a role.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/Role'
+    responses:
+        200:
+            description: Successfully assigned role.
+        404:
+            description: Fail assigned role.
+    """
+    # Decode token to obtain user's firebase id
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+
+    # # only admin have access to assign role
+    # if decoded_token["admin"] is False:
+    #     raise Unauthorized(
+    #         "The user is not authorized to retrieve this content"
+    #     )
+
+    # Get role and accessLevel
+    data: dict = request.get_json()
+    email: str = data["email"]
+    role: str = data["roleName"]
+    level: str = data["level"]
+    user: UserRecord = auth.get_user_by_email(email)
+    current_custom_claims = user.custom_claims
+
+    # Reference to user document
+    user_ref = db.collection("User").document(user.uid)
+    if user_ref.get().exists == False:
+        raise NotFound("The user not found")
+
+    # User has no previous role in their custom claims
+    if current_custom_claims is None:
+        auth.set_custom_user_claims(
+            user.uid, {role: True, "accessLevel": level}
+        )
+    # User has a role set previously
+    else:
+        if current_custom_claims["accessLevel"] >= level:
+            current_custom_claims[role] = True
+        else:
+            current_custom_claims["accessLevel"] = level
+            current_custom_claims[role] = True
+
+        auth.set_custom_user_claims(user.uid, current_custom_claims)
+
+    user_ref.update({"role": role})
+
+    return Response("Successfully assigned role", 200)
+
+
+@users.delete("/revoke_role/<email>")
+@check_token
+@admin_only
+def revoke_role(email: str) -> Response:
+    """
+    Remove a role from a specificed user. Level is also updated if it's affected by the removal of role
+    ---
+    tags:
+        - users
+    summary: Upon newly registering a user, they are granted a role.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: uid
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            description: Successfully removing role.
+        404:
+            description: Fail removing role.
+    """
+    user_record = auth.get_user_by_email(email)
+
+    # Reference to user document
+    user_ref = db.collection("User").document(user_record.uid)
+    if user_ref.get().exists == False:
+        raise NotFound("The user not found")
+    user: dict = user_ref.get().to_dict()
+
+    # remove the custom user claims
+    auth.set_custom_user_claims(
+        user_record.uid, {user.get("role"): None, "accessLevel": None}
+    )
+
+    # update user table
+    user_ref.update({"role": firestore.DELETE_FIELD})
+
+    return Response("Successfully removing role", 200)

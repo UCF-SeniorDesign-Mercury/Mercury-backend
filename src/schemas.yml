@@ -73,12 +73,17 @@ Event:
 Role:
   type: object
   properties:
+    email:
+      type: string
+      required: true
     roleName:
       type: string
-      example: Admin
+      example: admin
+      required: true
     level:
       type: integer
       example: 1
+      required: true
 
 AssignRole:
   type: object
@@ -202,10 +207,6 @@ UserRegister:
       type: string
       required: true
       example: 000-000-0000
-    email:
-      type: string
-      required: true
-      example: user@mail.com
     profile_picture:
       type: string
       format: base64
