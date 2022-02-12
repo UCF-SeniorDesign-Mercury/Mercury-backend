@@ -447,11 +447,11 @@ def change_status():
 @check_token
 def get_user_files() -> Response:
     """
-    Get a file from Firebase Storage.
+    Get the user  files from Firebase Storage.
     ---
     tags:
         - files
-    summary: Gets a file
+    summary: Gets user files
     parameters:
         - in: header
           name: Authorization

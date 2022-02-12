@@ -91,9 +91,13 @@ Role:
     email:
       type: string
       required: true
-    roleName:
+    role:
       type: string
       example: admin
+      required: true
+    rank:
+      type: string
+      example: major
       required: true
     level:
       type: integer
