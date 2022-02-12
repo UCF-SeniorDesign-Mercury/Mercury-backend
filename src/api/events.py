@@ -213,8 +213,14 @@ def update_event() -> Response:
     #     )
 
     # update event by given paramter
-    if "date" in event:
-        event_ref.update({"date": data["date"]})
+    if "starttime" in event:
+        event_ref.update({"starttime": data["starttime"]})
+    if "endtime" in event:
+        event_ref.update({"endtime": data["endtime"]})
+    if "period" in event:
+        event_ref.update({"period": data["period"]})
+    if "type" in event:
+        event_ref.update({"type": data["type"]})
     if "title" in event:
         event_ref.update({"title": data["title"]})
     if "description" in event:
