@@ -11,9 +11,14 @@
         get_user_files()
         get_next_user_files_page()
 """
-from email.policy import default
-from flask import Response, request
+from datetime import datetime
 from src.common.decorators import check_token
+from src.common.database import db
+from src.api import Blueprint
+from firebase_admin import storage, auth, firestore
+from flask import Response, request, jsonify
+from uuid import uuid4
+from os.path import splitext
 from werkzeug.exceptions import (
     InternalServerError,
     BadRequest,
@@ -21,13 +26,6 @@ from werkzeug.exceptions import (
     Unauthorized,
     UnsupportedMediaType,
 )
-from firebase_admin import storage, auth, firestore
-from uuid import uuid4
-from os.path import splitext
-from flask import jsonify
-
-from src.common.database import db
-from src.api import Blueprint
 
 files: Blueprint = Blueprint("files", __name__)
 
@@ -51,7 +49,7 @@ def upload_file() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/File'
+                    $ref: '#/components/schemas/UploadFile'
     responses:
         201:
             description: File uploaded
@@ -72,6 +70,8 @@ def upload_file() -> Response:
     uid: str = decoded_token.get("uid")
     file_id: str = str(uuid4())
     signature_id: str = str(uuid4())
+    file_path: str = "file/" + file_id
+    signature_path: str = "signature/" + signature_id
     data: dict = request.get_json()
 
     # get user table
@@ -104,14 +104,14 @@ def upload_file() -> Response:
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["filename"] = data.get("filename")
     entry["status"] = 1
-    entry["reviewer"] = data["reviewer"]
+    entry["reviewer"] = data.get("reviewer")
     entry["comment"] = ""
     db.collection("Files").document(file_id).set(entry)
 
     try:
         # save pdf to firestore storage
         bucket = storage.bucket()
-        blob = bucket.blob(file_id)
+        blob = bucket.blob(file_path)
         blob.upload_from_string(file, content_type="application/pdf")
     except:
         raise InternalServerError("Could not save pdf")
@@ -120,7 +120,7 @@ def upload_file() -> Response:
     if data.get("signature") != None:
         try:
             # save signature image to firebase storage
-            blob = bucket.blob(signature_id)
+            blob = bucket.blob(signature_path)
             blob.upload_from_string(data.get("signature"), content_type="image")
         except:
             raise InternalServerError("Could not save signature")
@@ -155,7 +155,7 @@ def get_file(file_id: str) -> Response:
             content:
                 application/json:
                     schema:
-                        '#/components/schemas/File'
+                        $ref: '#/components/schemas/File'
         400:
             description: Bad request
         401:
@@ -171,10 +171,10 @@ def get_file(file_id: str) -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
-
+    file_path: str = "file/" + file_id
     # get pdf from the firebase storage
     bucket = storage.bucket()
-    blob = bucket.blob(file_id)
+    blob = bucket.blob(file_path)
 
     if not blob.exists():
         return NotFound("The file with the given filename was not found.")
@@ -203,8 +203,8 @@ def get_file(file_id: str) -> Response:
         )
 
     # download the pdf file and add it to the file data
-    blob = bucket.blob(user.get("signature"))
-
+    signature_path: str = "signature/" + user.get("signature")
+    blob = bucket.blob(signature_path)
     if not blob.exists():
         return NotFound("The user's signature was not found.")
     signature = blob.download_as_bytes()
@@ -252,26 +252,19 @@ def delete_file(file_id: str) -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    file_path: str = "file/" + file_id
 
     # get file data from firestore
     data_ref = db.collection("Files").document(file_id)
-
     if not data_ref.get().exists:
         return NotFound("The file was not found")
-
     data: dict = data_ref.get().to_dict()
-
-    # get the user date from the user table
-    user_ref = db.collection("User").document(uid)
-    if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
-    user: dict = user_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
     if (
         uid != data.get("reviewer")
         and uid != data.get("author")
-        and user.get("role") != "admin"
+        and decoded_token.get("admin") != True
     ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
@@ -279,7 +272,7 @@ def delete_file(file_id: str) -> Response:
 
     # delete the pdf from firebase storage
     bucket = storage.bucket()
-    blob = bucket.blob(file_id)
+    blob = bucket.blob(file_path)
     if not blob.exists():
         return NotFound("The file with the given filename was not found.")
     blob.delete()
@@ -327,30 +320,24 @@ def update_file():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    author_uid: str = decoded_token.get("uid")
+    uid: str = decoded_token.get("uid")
     data: dict = request.get_json()
 
     # fetch the file data from firestore
-    file_ref = db.collection("Files").document(data["file_id"])
+    file_ref = db.collection("Files").document(data.get("file_id"))
     if file_ref.get().exists == False:
         raise NotFound("The file not found")
     file = file_ref.get().to_dict()
-
-    # get the user table
-    user_ref = db.collection("User").document(author_uid).get()
-    if user_ref.exists == False:
-        raise NotFound("The user was not found")
-    user: dict = user_ref.to_dict()
 
     # exceptions
     if not file_ref.get().exists:
         return NotFound("The file with the given filename was not found")
 
-    if file["status"] < 0 or file["status"] > 3:
+    if file.get("status") < 0 or file.get("status") > 3:
         raise BadRequest("Files is not allow to change after decision made")
 
     # Only the author have access to update the file
-    if author_uid != file["author"]:
+    if uid != file.get("author"):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
@@ -365,9 +352,10 @@ def update_file():
 
     # save pdf to firestore storage
     bucket = storage.bucket()
+    file_path: str = "file/" + data.get("file_id")
     if "file" in data:
         try:
-            blob = bucket.blob(data.get("file_id"))
+            blob = bucket.blob(file_path)
             blob.upload_from_string(
                 data.get("file"), content_type="application/pdf"
             )
@@ -376,8 +364,14 @@ def update_file():
 
     # save pdf to firestore storage
     if "signature" in data:
+        # get the user table
+        user_ref = db.collection("User").document(uid).get()
+        if user_ref.exists == False:
+            raise NotFound("The user was not found")
+        user: dict = user_ref.to_dict()
+        signature_path: str = "signature/" + user.get("signature")
         try:
-            blob = bucket.blob(user.get("signature"))
+            blob = bucket.blob(signature_path)
             blob.upload_from_string(data.get("signature"), content_type="image")
         except:
             raise InternalServerError("cannot update signature to storage")
@@ -435,13 +429,8 @@ def change_status():
         raise NotFound("The file not found")
     file: dict = file_ref.get().to_dict()
 
-    user_ref = db.collection("User").document(reviewer).get()
-    if user_ref.exists == False:
-        raise NotFound("The user not found")
-    user: dict = user_ref.to_dict()
-
     # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != file.get("reviewer") and user.get("role") != "admin":
+    if reviewer != file.get("reviewer") and decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
@@ -491,7 +480,7 @@ def get_user_files() -> Response:
                     schema:
                         type: array
                         items:
-                            $ref: '#/components/schemas/RecentFile'
+                            $ref: '#/components/schemas/UserFiles'
         400:
             description: Bad request
         401:
@@ -603,7 +592,7 @@ def get_next_event_page() -> Response:
                     schema:
                         type: array
                         items:
-                            $ref: '#/components/schemas/RecentFile'
+                            $ref: '#/components/schemas/UserFiles'
         400:
             description: Bad request
         401:
@@ -673,6 +662,128 @@ def get_next_event_page() -> Response:
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("author", "==", uid)
             .start_after(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+
+    for doc in file_docs:
+        files.append(doc.to_dict())
+
+    return jsonify(files), 200
+
+
+@files.get("/get_pre_user_files_page")
+@check_token
+def get_pre_event_page() -> Response:
+    """
+    Get pre 10 user files from Firebase.
+    ---
+    tags:
+        - files
+    summary: Get pre 10 user files from Firebase by passing file id.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: ID
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: status
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: filename
+          schema:
+            type: string
+          required: false
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/UserFiles'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    document: list = []
+    files: list = []
+
+    # Get ID of last event from client-side
+    file_id: str = request.args.get("ID", type=str)
+    # Get the page limits, filename, status from the front-end if exists
+    page_limit: int = request.args.get("page_limit", default=10, type=int)
+    filename: str = request.args.get("filename", type=str)
+    status: int = request.args.get("status", type=int)
+
+    # Get reference to document with that ID
+    last_ref = db.collection("Files").where("id", "==", file_id).stream()
+    for doc in last_ref:
+        document.append(doc.to_dict())
+
+    # Get the next batch of documents that come after the last document we received a reference to before
+    if "status" in request.args and "filename" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.ASCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", status)
+            .where("filename", "==", filename)
+            .end_before(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    elif "status" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.ASCENDING)
+            .where("author", "==", uid)
+            .where("status", "==", status)
+            .end_before(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    elif "filename" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.ASCENDING)
+            .where("author", "==", uid)
+            .where("filename", "==", filename)
+            .end_before(document[0])
+            .limit(page_limit)
+            .stream()
+        )
+    else:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.ASCENDING)
+            .where("author", "==", uid)
+            .end_before(document[0])
             .limit(page_limit)
             .stream()
         )
