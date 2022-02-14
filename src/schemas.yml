@@ -1,3 +1,4 @@
+# --------------------------------- Event ------------------------------- #
 EventData:
   type: object
   properties:
@@ -76,16 +77,39 @@ Event:
     participants:
       type: array
       example: ["001", "002", "003", "007"]
+EventStatus:
+  type: object
+  properties:
+    event_id:
+      type: string
+      required: true
+      description: this is the event id
+      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
+    decision:
+      type: integer
+      required: true
+      decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
+      example: 3
 
+# --------------------------------- Role ------------------------------- #
 Role:
   type: object
   properties:
-    roleName:
+    email:
       type: string
-      example: Admin
+      required: true
+    role:
+      type: string
+      example: admin
+      required: true
+    rank:
+      type: string
+      example: major
+      required: true
     level:
       type: integer
       example: 1
+      required: true
 
 AssignRole:
   type: object
@@ -97,8 +121,51 @@ AssignRole:
       type: string
       example: Doctor
 
+# --------------------------------- File ------------------------------- #
 File:
   id: File
+  type: object
+  properties:
+    filename:
+      type: string
+      example: 1380_Blank.pdf
+      required: true
+    reviewer:
+      type: string
+      required: true
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
+    signature:
+      type: string
+      format: base64
+      required: true
+      description: The user signature
+    author:
+      type: string
+      required: true
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    id:
+      type: string
+      required: true
+      description: the file uid
+    comment:
+      type: string
+      required: true
+      description: The user signature
+    status:
+      type: integer
+      required: true
+      description: resubmit = 3, Approved = 4, Rejected = 5
+    timestamp:
+      type: date-time
+      required: true
+      example: yy-MM-dd SSS HH:mm:ss
+
+UploadFile:
   type: object
   properties:
     filename:
@@ -120,33 +187,39 @@ File:
       required: false
       description: The user signature
 
-RecentFile:
+UserFiles:
   type: object
   properties:
-    author:
-      type: string
-      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     filename:
       type: string
       example: 1380_Blank.pdf
+      required: true
     reviewer:
       type: string
+      required: true
+      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    author:
+      type: string
+      required: true
       example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     id:
       type: string
+      required: true
       description: the file uid
     comment:
       type: string
+      required: true
       description: The user signature
     status:
       type: integer
+      required: true
       description: resubmit = 3, Approved = 4, Rejected = 5
     timestamp:
-      type: timestamp
+      type: date-time
+      required: true
       example: yy-MM-dd SSS HH:mm:ss
 
 UpdateFile:
-  id: UpdateFile
   type: object
   properties:
     file_id:
@@ -155,10 +228,12 @@ UpdateFile:
       required: true
     filename:
       type: string
+      required: false
       example: 1380_Blank.pdf
     file:
       type: string
       format: byte
+      required: false
       description: A file encoded in Base64
     signature:
       type: string
@@ -185,16 +260,87 @@ FileStatus:
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
 
-EventStatus:
+# --------------------------------- User ------------------------------- #
+UserRegister:
   type: object
   properties:
-    event_id:
+    display_name:
       type: string
       required: true
-      description: this is the event id
-      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
-    decision:
+    phone:
+      type: string
+      required: true
+      example: 000-000-0000
+    profile_picture:
+      type: string
+      format: base64
+      required: false
+    description:
+      type: string
+      required: false
+
+User:
+  type: object
+  properties:
+    display_name:
+      type: string
+      required: true
+    phone:
+      type: string
+      required: true
+      example: 000-000-0000
+    email:
+      type: string
+      required: false
+      example: user@mail.com
+    profile_picture:
+      type: string
+      format: base64
+      required: true
+    description:
+      type: string
+      required: false
+    role:
+      type: string
+      required: false
+    rank:
+      type: string
+      required: false
+    superior:
+      type: string
+      required: false
+    subordinates:
+      type: array
+      example: []
+      required: false
+    signature:
+      type: string
+      required: false
+    user_status:
       type: integer
       required: true
-      decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
-      example: 3
+
+UserUpdate:
+  type: object
+  properties:
+    display_name:
+      type: string
+      required: false
+    phone:
+      type: string
+      required: false
+      example: 000-000-0000
+    email:
+      type: string
+      required: false
+      example: user@mail.com
+    profile_picture:
+      type: string
+      format: base64
+      required: false
+    description:
+      type: string
+      required: false
+    signature:
+      type: string
+      required: false
