@@ -11,6 +11,13 @@ EventData:
     endtime:
       type: timestamp
       example: yy-MM-dd SSS HH:mm:ss
+    period:
+      type: boolean
+      example: true
+    type:
+      type: string
+      example: mandatory
+      description: mandatory, optional, or personal
     organizer:
       type: string
       example: The organizer name

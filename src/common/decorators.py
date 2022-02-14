@@ -70,7 +70,7 @@ def admin_only(f):
         if not doc_ref.exists:
             raise Unauthorized("User no longer exists")
         # if the user is not admin role
-        if doc["role"] != "admin":
+        if doc.get("role") != "admin":
             raise Unauthorized("You don't have the access rights")
 
         return f(*args, **kwargs)
