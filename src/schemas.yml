@@ -284,7 +284,7 @@ User:
       example: 000-000-0000
     email:
       type: string
-      required: true
+      required: false
       example: user@mail.com
     profile_picture:
       type: string

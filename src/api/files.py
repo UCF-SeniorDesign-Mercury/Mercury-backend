@@ -77,7 +77,7 @@ def upload_file() -> Response:
     # get user table
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
     # Exceptions
@@ -189,7 +189,7 @@ def get_file(file_id: str) -> Response:
     # get the user table
     user_ref = db.collection("User").document(uid).get()
     if user_ref.exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.to_dict()
 
     # Only the author, reviewer, and admin have access to the data

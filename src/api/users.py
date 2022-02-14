@@ -73,7 +73,7 @@ def register_user() -> Response:
     entry["display_name"] = user_data.get("display_name")
     entry["phone"] = user_data.get("phone")
     entry["email"] = decoded_token.get("email")
-    entry["status"] = 1
+    entry["user_status"] = 1
 
     # if user upload the profile picture
     bucket = storage.bucket()
@@ -141,7 +141,7 @@ def update_user() -> Response:
     # check if the user is in the table or not
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
     bucket = storage.bucket()
 
@@ -268,10 +268,10 @@ def get_user() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    # check if the user exsist
+    # check if the user exists
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
 
     user: dict = user_ref.get().to_dict()
 
@@ -350,7 +350,7 @@ def assign_role() -> Response:
     # Reference to user document
     user_ref = db.collection("User").document(user.uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
 
     # User has no previous role in their custom claims
     if current_custom_claims is None:
@@ -404,7 +404,7 @@ def revoke_role(email: str) -> Response:
     # Reference to user document
     user_ref = db.collection("User").document(user_record.uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user not found")
+        raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
     # remove the custom user claims
