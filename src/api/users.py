@@ -340,10 +340,10 @@ def assign_role() -> Response:
 
     # Get role and accessLevel
     data: dict = request.get_json()
-    email: str = data["email"]
-    role: str = data["role"]
-    level: str = data["level"]
-    rank: str = data["rank"]
+    email: str = data.get("email")
+    role: str = data.get("role")
+    level: str = data.get("level")
+    rank: str = data.get("rank")
     user: UserRecord = auth.get_user_by_email(email)
     current_custom_claims = user.custom_claims
 
@@ -367,7 +367,8 @@ def assign_role() -> Response:
 
         auth.set_custom_user_claims(user.uid, current_custom_claims)
 
-    user_ref.update({"role": role, "rank": rank})
+    if "rank" in data:
+        user_ref.update({"role": role, "rank": rank})
 
     return Response("Successfully assigned role", 200)
 

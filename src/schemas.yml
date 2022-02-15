@@ -105,7 +105,7 @@ Role:
     rank:
       type: string
       example: major
-      required: true
+      required: false
     level:
       type: integer
       example: 1
