@@ -279,7 +279,8 @@ def get_user() -> Response:
     bucket = storage.bucket()
 
     if "signature" in user:
-        blob = bucket.blob(user.get("signature"))
+        signature_path: str = "signature/" + user.get("signature")
+        blob = bucket.blob(signature_path)
 
         if not blob.exists():
             raise NotFound("The signature not found.")
@@ -289,7 +290,10 @@ def get_user() -> Response:
         user["signature"] = signature.decode("utf-8")
 
     if "profile_picture" in user:
-        blob = bucket.blob(user.get("profile_picture"))
+        profile_picture_path: str = "profile_picture/" + user.get(
+            "profile_picture"
+        )
+        blob = bucket.blob(profile_picture_path)
 
         if not blob.exists():
             raise NotFound("The profile picture not found.")
@@ -333,7 +337,7 @@ def assign_role() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
 
     # only admin have access to assign role
-    if decoded_token["admin"] == False:
+    if decoded_token.get("admin") != True:
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
