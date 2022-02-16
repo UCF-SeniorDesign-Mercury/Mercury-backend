@@ -52,8 +52,6 @@ def register_user() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -85,7 +83,9 @@ def register_user() -> Response:
         )
         entry["profile_picture"] = profile_picture
     else:
-        entry["profile_picture"] = "profile_picture/ArmyReserve.png"
+        entry[
+            "profile_picture"
+        ] = "profile_picture/f1f720cb-bf7a-4aa3-a9eb-a447753f229e"
 
     # if user upload the description
     if "description" in user_data:
@@ -279,7 +279,7 @@ def get_user() -> Response:
     bucket = storage.bucket()
 
     if "signature" in user:
-        signature_path: str = "signature/" + user.get("signature")
+        signature_path: str = user.get("signature")
         blob = bucket.blob(signature_path)
 
         if not blob.exists():
@@ -290,15 +290,13 @@ def get_user() -> Response:
         user["signature"] = signature.decode("utf-8")
 
     if "profile_picture" in user:
-        profile_picture_path: str = "profile_picture/" + user.get(
-            "profile_picture"
-        )
+        profile_picture_path: str = user.get("profile_picture")
         blob = bucket.blob(profile_picture_path)
 
         if not blob.exists():
             raise NotFound("The profile picture not found.")
 
-        # download the signature image
+        # download the profile_picture image
         profile_picture = blob.download_as_bytes()
         user["profile_picture"] = profile_picture.decode("utf-8")
 
@@ -363,16 +361,15 @@ def assign_role() -> Response:
         )
     # User has a role set previously
     else:
-        if current_custom_claims["accessLevel"] >= level:
-            current_custom_claims[role] = True
-        else:
-            current_custom_claims["accessLevel"] = level
-            current_custom_claims[role] = True
+        current_custom_claims["accessLevel"] = level
+        current_custom_claims[role] = True
 
         auth.set_custom_user_claims(user.uid, current_custom_claims)
 
+    user_ref.update({"role": role})
+
     if "rank" in data:
-        user_ref.update({"role": role, "rank": rank})
+        user_ref.update({"rank": rank})
 
     return Response("Successfully assigned role", 200)
 
