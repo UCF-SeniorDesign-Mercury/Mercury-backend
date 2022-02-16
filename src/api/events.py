@@ -214,19 +214,19 @@ def update_event() -> Response:
 
     # update event by given paramter
     if "starttime" in event:
-        event_ref.update({"starttime": data["starttime"]})
+        event_ref.update({"starttime": data.get("starttime")})
     if "endtime" in event:
-        event_ref.update({"endtime": data["endtime"]})
+        event_ref.update({"endtime": data.get("endtime")})
     if "period" in event:
-        event_ref.update({"period": data["period"]})
+        event_ref.update({"period": data.get("period")})
     if "type" in event:
-        event_ref.update({"type": data["type"]})
+        event_ref.update({"type": data.get("type")})
     if "title" in event:
-        event_ref.update({"title": data["title"]})
+        event_ref.update({"title": data.get("title")})
     if "description" in event:
-        event_ref.update({"description": data["description"]})
+        event_ref.update({"description": data.get("description")})
     if "organizer" in event:
-        event_ref.update({"organizer": data["organizer"]})
+        event_ref.update({"organizer": data.get("organizer")})
 
     return Response(response="Event updated", status=200)
 
@@ -469,8 +469,8 @@ def register_event(event_id: str) -> Response:
     event_ref.update({"participants": firestore.ArrayUnion([uid])})
 
     # update the user table
-    user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"registeredEvents": firestore.ArrayUnion([event_id])})
+    user_ref = db.collection("User").document(uid)
+    user_ref.update({"registeredEvents": firestore.ArrayUnion([event_id])})
 
     return Response(response="Registered the event", status=200)
 
@@ -527,8 +527,8 @@ def cancel_register(event_id: str) -> Response:
     event_ref.update({"participants": firestore.ArrayRemove([uid])})
 
     # update the user table
-    user_ref = db.collection(u"User").document(uid)
-    user_ref.update({u"registeredEvents": firestore.ArrayRemove([event_id])})
+    user_ref = db.collection("User").document(uid)
+    user_ref.update({"registeredEvents": firestore.ArrayRemove([event_id])})
 
     return Response(response="Canceled the reservation", status=200)
 
@@ -579,7 +579,7 @@ def change_status():
         return BadRequest("Unsupported decision type")
 
     # fetch the file data from firestore
-    event_ref = db.collection(u"Scheduled-Events").document(data["event_id"])
+    event_ref = db.collection("Scheduled-Events").document(data["event_id"])
     event = event_ref.get().to_dict()
 
     # # Future function: Only the reviewer, and admin have access to change the status of the file
@@ -588,6 +588,6 @@ def change_status():
     #         "The user is not authorized to retrieve this content", 401
     #     )
 
-    event_ref.update({u"status": data["decision"]})
+    event_ref.update({"status": data["decision"]})
 
     return Response("Status changed", 200)
