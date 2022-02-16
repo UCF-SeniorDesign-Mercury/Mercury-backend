@@ -302,7 +302,6 @@ User:
       example: user@mail.com
     profile_picture:
       type: string
-      format: base64
       required: true
     description:
       type: string
