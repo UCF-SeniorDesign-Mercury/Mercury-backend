@@ -390,11 +390,6 @@ def revoke_role(email: str) -> Response:
           schema:
             type: string
           required: true
-        - in: path
-          name: uid
-          schema:
-            type: string
-          required: true
     responses:
         200:
             description: Successfully removing role.
