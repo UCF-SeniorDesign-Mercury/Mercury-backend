@@ -16,14 +16,7 @@
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
-from werkzeug.exceptions import (
-    BadRequest,
-    NotFound,
-    Forbidden,
-    InternalServerError,
-    Unauthorized,
-    UnsupportedMediaType,
-)
+from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
 from src.common.database import db
@@ -34,7 +27,6 @@ events: Blueprint = Blueprint("events", __name__)
 
 @events.post("/create_event")
 @check_token
-@admin_only
 def create_event() -> Response:
     """
     Creates an event.
@@ -52,7 +44,7 @@ def create_event() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/EventData'
+                    $ref: '#/components/schemas/CreateEvent'
         description: Created event object
         required: true
     responses:
@@ -75,18 +67,24 @@ def create_event() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    # check user permission
-
     # add more initial information
     data: dict = request.get_json()
-    data["author"] = uid
-    data["id"] = str(uuid4())
-    data["timestamp"] = firestore.SERVER_TIMESTAMP
-    data["participants"] = []
-    data["status"] = 1
+
+    entry: dict = dict()
+
+    entry["author"] = uid
+    entry["event_id"] = str(uuid4())
+    entry["timestamp"] = firestore.SERVER_TIMESTAMP
+    entry["title"] = data.get("title")
+    entry["starttime"] = data.get("starttime")
+    entry["endtime"] = data.get("endtime")
+    entry["type"] = data.get("type")
+    entry["period"] = data.get("period")
+    entry["organizer"] = data.get("organizer")
+    entry["description"] = data.get("description")
 
     # write to Firestore DB
-    db.collection("Scheduled-Events").document(data["id"]).set(data)
+    db.collection("Scheduled-Events").document(data["id"]).set(entry)
 
     # return Response 201 for successfully creating a new resource
     return Response(response="Event added", status=201)
@@ -94,7 +92,6 @@ def create_event() -> Response:
 
 @events.delete("/delete_event/<event_id>")
 @check_token
-@admin_only
 def delete_event(event_id: str) -> Response:
     """
     Delete an event from database.
@@ -123,8 +120,6 @@ def delete_event(event_id: str) -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -136,17 +131,17 @@ def delete_event(event_id: str) -> Response:
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
-    event = event_ref.get().to_dict()
+    event: dict = event_ref.get().to_dict()
 
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event not found")
 
-    # # Future function: Only the event organisor or the admin could delete the event
-    # if event["author"] != uid and decoded_token.get("admin") != True:
-    #     return Response(
-    #         "The user is not authorized to retrieve this content", 401
-    #     )
+    # Only the event user could delete the event
+    if event["author"] != uid:
+        return Response(
+            "The user is not authorized to retrieve this content", 401
+        )
 
     event_ref.delete()
 
@@ -155,7 +150,6 @@ def delete_event(event_id: str) -> Response:
 
 @events.put("/update_event")
 @check_token
-@admin_only
 def update_event() -> Response:
     """
     Updates an event that has already been created.
@@ -190,27 +184,26 @@ def update_event() -> Response:
         500:
             description: Internal API Error
     """
-    # Check user access levels
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     data: dict = request.get_json()
-    event_id: str = data["id"]
+    event_id: str = data.get("event_id")
     uid: str = decoded_token.get("uid")
 
     # fetch event data from firestore
     event_ref = db.collection("Scheduled-Events").document(event_id)
-    event = event_ref.get().to_dict()
+    event: dict = event_ref.get().to_dict()
 
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event was not found")
 
-    # # Future FUnction: Only the event organisor or the admin could delete the event
-    # if event["author"] != uid and decoded_token.get("admin") != True:
-    #     return Response(
-    #         "The user is not authorized to retrieve this content", 401
-    #     )
+    # Only the user could delete the event
+    if event.get("author") != uid:
+        return Unauthorized(
+            "The user is not authorized to retrieve this content", 401
+        )
 
     # update event by given paramter
     if "starttime" in event:
@@ -272,20 +265,28 @@ def get_event(event_id: str) -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
 
     # fetch the event data from firestore
-    doc = db.collection("Scheduled-Events").document(event_id).get()
+    event_ref = db.collection("Scheduled-Events").document(event_id)
+    event: dict = event_ref.get().to_dict()
+
+    # Only the user could get the event
+    if event.get("author") != uid:
+        return Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
 
     # event not found exception
-    if not doc.exists:
+    if not event_ref.get().exists:
         return NotFound("Event no longer exist")
 
-    return jsonify(doc.to_dict()), 200
+    return jsonify(event), 200
 
 
-@events.get("/get_recent_events")
+@events.get("/get_events")
 @check_token
-def get_recent_events() -> Response:
+def get_events() -> Response:
     """
     Get recent 10 events from database.
     ---
@@ -298,6 +299,24 @@ def get_recent_events() -> Response:
           schema:
             type: string
           required: true
+        - in: query
+          name: status
+          schema:
+            type: boolean
+          example: true for comming events, false for past events.
+          required: false
+        - in: query
+          name: type
+          schema:
+            type: string
+          example: mandatory, optional, or personal.
+          required: false
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          example: default is 10.
+          required: false
     responses:
         200:
             content:
@@ -321,273 +340,20 @@ def get_recent_events() -> Response:
     # Decode token to obtain user's firebase id
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-
-    try:
-        docs: list = (
-            db.collection("Scheduled-Events")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .limit(10)
-            .stream()
-        )
-
-        events: list = []
-        for doc in docs:
-            events.append(doc.to_dict())
-
-        return jsonify(events), 200
-
-    except:
-        return InternalServerError(response="Failed event retrieved")
-
-
-@events.get("/get_next_event_page")
-@check_token
-def get_next_event_page() -> Response:
-    """
-    Get next 10 events from Firebase.
-    ---
-    tags:
-        - event
-    summary: Gets next 10 events by pass the last event id.
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-        - in: header
-          name: ID
-          schema:
-            type: string
-          required: true
-    responses:
-        200:
-            content:
-                application/json:
-                    schema:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/Event'
-        400:
-            description: Bad request
-        401:
-            description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
-        500:
-            description: Internal API Error
-    """
-    try:
-        document: list = []
-        events: list = []
-
-        # Get ID of last event from client-side
-        event_id: str = request.headers["ID"]
-
-        # Get reference to document with that ID
-        last_ref = (
-            db.collection("Scheduled-Events")
-            .where("id", "==", event_id)
-            .stream()
-        )
-        for doc in last_ref:
-            document.append(doc.to_dict())
-
-        # Get the next batch of documents that come after the last document we received a reference to before
-        docs = (
-            db.collection("Scheduled-Events")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .start_after(document[0])
-            .limit(10)
-            .stream()
-        )
-        for doc in docs:
-            events.append(doc.to_dict())
-
-        return jsonify(events), 200
-
-    except:
-        return InternalServerError("Failed event retrieved")
-
-
-@events.put("/register_event/<event_id>")
-@check_token
-def register_event(event_id: str) -> Response:
-    """
-    User register an exists event
-    ---
-    tags:
-        - event
-    summary: Register event
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: event_id
-          schema:
-            type: string
-          required: true
-    responses:
-        200:
-            description: Registered for the event
-        400:
-            description: Bad request
-        401:
-            description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
-        500:
-            description: Internal API Error
-    """
-    # Check user access levels
-    # Decode token to obtain user's firebase id
-    token: str = request.headers["Authorization"]
-    decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    # fetch event data from firestore
-    event_ref = db.collection("Scheduled-Events").document(event_id)
-    event = event_ref.get().to_dict()
+    page_limit: str = request.args.get("page_limit", type=int, default=10)
 
-    # if enevt does not exists
-    if not event_ref.get().exists:
-        return NotFound("The event no longer exists")
-    # Only the event organisor or the admin could delete the event
-    if event["status"] > 1:
-        return Forbidden("The event is closed for registration")
+    docs: list = (
+        db.collection("Scheduled-Events")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .where("author", "==", uid)
+        .limit(page_limit)
+        .stream()
+    )
 
-    # Future function: candidates_filter nice to have
+    events: list = []
+    for doc in docs:
+        events.append(doc.to_dict())
 
-    # add the user uid to the participants array
-    event_ref.update({"participants": firestore.ArrayUnion([uid])})
-
-    # update the user table
-    user_ref = db.collection("User").document(uid)
-    user_ref.update({"registeredEvents": firestore.ArrayUnion([event_id])})
-
-    return Response(response="Registered the event", status=200)
-
-
-@events.put("/cancel_register/<event_id>")
-@check_token
-def cancel_register(event_id: str) -> Response:
-    """
-    User register an exists event
-    ---
-    tags:
-        - event
-    summary: Cancel registered event
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-        - in: path
-          name: event_id
-          schema:
-            type: string
-          required: true
-    responses:
-        200:
-            description: Cancel register for the event
-        400:
-            description: Bad request
-        401:
-            description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
-        500:
-            description: Internal API Error
-    """
-    # Check user access levels
-    # Decode token to obtain user's firebase id
-    token: str = request.headers["Authorization"]
-    decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token.get("uid")
-
-    # fetch event data from firestore
-    event_ref = db.collection("Scheduled-Events").document(event_id)
-    event = event_ref.get().to_dict()
-
-    # if enevt does not exists
-    if not event_ref.get().exists:
-        return NotFound("The event no longer exists")
-
-    # add the user uid to the participants array
-    event_ref.update({"participants": firestore.ArrayRemove([uid])})
-
-    # update the user table
-    user_ref = db.collection("User").document(uid)
-    user_ref.update({"registeredEvents": firestore.ArrayRemove([event_id])})
-
-    return Response(response="Canceled the reservation", status=200)
-
-
-@events.put("/change_status")
-@check_token
-@admin_only
-def change_status():
-    """
-    Change the status of an event from Firebase Storage.
-    ---
-    tags:
-        - event
-    summary: Change the status
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-    requestBody:
-        content:
-            application/json:
-                schema:
-                    $ref: '#/components/schemas/EventStatus'
-    responses:
-        200:
-            description: Status changed
-        400:
-            description: Bad request
-        401:
-            description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
-        500:
-            description: Internal API Error
-    """
-    # check tokens and get uid from token
-    token: str = request.headers["Authorization"]
-    decoded_token: dict = auth.verify_id_token(token)
-    reviewer: str = decoded_token.get("uid")
-    data: dict = request.get_json()
-
-    # exceptions
-    if data["decision"] < 1 or data["decision"] > 6:
-        return BadRequest("Unsupported decision type")
-
-    # fetch the file data from firestore
-    event_ref = db.collection("Scheduled-Events").document(data["event_id"])
-    event = event_ref.get().to_dict()
-
-    # # Future function: Only the reviewer, and admin have access to change the status of the file
-    # if reviewer != event["author"] and decoded_token.get("admin") != True:
-    #     raise Response(
-    #         "The user is not authorized to retrieve this content", 401
-    #     )
-
-    event_ref.update({"status": data["decision"]})
-
-    return Response("Status changed", 200)
+    return jsonify(events), 200

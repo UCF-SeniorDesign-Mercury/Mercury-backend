@@ -1,28 +1,35 @@
 # --------------------------------- Event ------------------------------- #
-EventData:
+CreateEvent:
   type: object
   properties:
     title:
       type: string
+      required: true
       example: Coffe time
     starttime:
       type: timestamp
+      required: true
       example: yy-MM-dd SSS HH:mm:ss
     endtime:
       type: timestamp
+      required: true
       example: yy-MM-dd SSS HH:mm:ss
     period:
       type: boolean
+      required: true
       example: true
     type:
       type: string
       example: mandatory
+      required: true
       description: mandatory, optional, or personal
     organizer:
       type: string
+      required: true
       example: The organizer name
     description:
       type: string
+      required: true
       example: Drink coffee with your teammates
 
 UpdateEvent:
@@ -30,28 +37,35 @@ UpdateEvent:
   properties:
     title:
       type: string
+      required: false
       example: Coffe time
-    id:
+    event_id:
       type: string
+      required: true
       example: The event id here
     starttime:
       type: timestamp
+      required: false
       example: yy-MM-dd SSS HH:mm:ss
     endtime:
       type: timestamp
+      required: false
       example: yy-MM-dd SSS HH:mm:ss
     organizer:
       type: string
+      required: false
       example: The organier name
     description:
       type: string
+      required: false
       example: Drink coffee with your teammates
     period:
       type: boolean
-      example: true
+      example: false
     type:
       type: string
       example: mandatory
+      required: false
       description: mandatory, optional, or personal
 
 Event:
@@ -59,44 +73,43 @@ Event:
   properties:
     author:
       type: string
+      required: true
       example: this is the author uid
-    id:
-      type: string
-      example: this is the event id
-    timestamp:
-      type: timestamp
-      example: yy-MM-dd SSS HH:mm:ss
-    title:
-      type: string
-      example: Coffe time
-    starttime:
-      type: timestamp
-      example: yy-MM-dd SSS HH:mm:ss
-    endtime:
-      type: timestamp
-      example: yy-MM-dd SSS HH:mm:ss
-    organizer:
-      type: string
-      example: The organier name
-    description:
-      type: string
-      example: Drink coffee with your teammates
-    participants:
-      type: array
-      example: ["001", "002", "003", "007"]
-EventStatus:
-  type: object
-  properties:
     event_id:
       type: string
       required: true
-      description: this is the event id
-      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
-    decision:
-      type: integer
+      example: this is the event id
+    timestamp:
+      type: timestamp
       required: true
-      decription: 1 open for register (default value), 2 close register, but not yet start, 3 event start, 4 event end, 5 event cancel
-      example: 3
+      example: yy-MM-dd SSS HH:mm:ss
+    title:
+      type: string
+      required: true
+      example: Coffe time
+    starttime:
+      type: timestamp
+      required: true
+      example: yy-MM-dd SSS HH:mm:ss
+    endtime:
+      type: timestamp
+      required: true
+      example: yy-MM-dd SSS HH:mm:ss
+    type:
+      type: string
+      required: true
+      example: mandatory, optional, or personal
+    period:
+      type: boolean
+      example: true
+    organizer:
+      type: string
+      required: true
+      example: The organier name
+    description:
+      type: string
+      required: true
+      example: Drink coffee with your teammates
 
 # --------------------------------- Role ------------------------------- #
 Role:
