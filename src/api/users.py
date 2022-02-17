@@ -471,7 +471,7 @@ def get_users() -> Response:
             description: Internal API Error
     """
     # the default page limits is 10
-    page_limit: int
+    page_limit: int = 10
     if "page_limit" in request.args:
         page_limit = request.args.get("page_limit", default=10, type=int)
 
