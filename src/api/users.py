@@ -446,6 +446,10 @@ def get_users() -> Response:
           schema:
             type: string
           required: false
+        - in: query
+          name: email
+          schema: string
+          required: false
     responses:
         200:
             content:
@@ -473,8 +477,18 @@ def get_users() -> Response:
     user_docs: list = []
     rank: str = request.args.get("rank", type=str)
     role: str = request.args.get("role", type=str)
-    # both status and filename search
-    if "role" in request.args and "rank" in request.args:
+    email: str = request.args.get("email", type=str)
+
+    # email exact search
+    if "email" in request.args:
+        user_docs = (
+            db.collection("User")
+            .where("email", "==", email)
+            .limit(page_limit)
+            .stream()
+        )
+    # both status and filename fuzzy search
+    elif "role" in request.args and "rank" in request.args:
         user_docs = (
             db.collection("User")
             .where("role", "==", role)
