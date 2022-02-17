@@ -448,7 +448,8 @@ def get_users() -> Response:
           required: false
         - in: query
           name: email
-          schema: string
+          schema:
+            type: string
           required: false
     responses:
         200:
