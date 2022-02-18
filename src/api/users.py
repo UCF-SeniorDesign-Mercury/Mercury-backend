@@ -160,7 +160,7 @@ def update_user() -> Response:
         if "profile_picture" in user:
             profile_picture_path = user.get("profile_picture")
         else:
-            profile_picture_path = "profile_picture/" + str(uuid4)
+            profile_picture_path = "profile_picture/" + str(uuid4())
             user_ref.update({"profile_picture": profile_picture_path})
         blob = bucket.blob(profile_picture_path)
         blob.upload_from_string(
@@ -170,7 +170,7 @@ def update_user() -> Response:
         if "signature" in user:
             signature_path = user.get("signature")
         else:
-            signature_path = "signature/" + str(uuid4)
+            signature_path = "signature/" + str(uuid4())
             user_ref.update({"signature": signature_path})
         blob = bucket.blob(signature_path)
         blob.upload_from_string(data.get("signature"), content_type="image")
