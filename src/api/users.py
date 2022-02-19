@@ -403,6 +403,8 @@ def revoke_role(email: str) -> Response:
     if user_ref.get().exists == False:
         raise NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
+    if "role" not in user:
+        raise BadRequest("The user have not assigned for a role yet")
 
     # remove the custom user claims
     auth.set_custom_user_claims(
