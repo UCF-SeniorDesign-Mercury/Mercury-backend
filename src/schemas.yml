@@ -284,82 +284,108 @@ FileStatus:
 UserRegister:
   type: object
   properties:
-    display_name:
+    name:
       type: string
       required: true
-    phone:
+    dod:
       type: string
       required: true
-      example: 000-000-0000
+    grade:
+      type: string
+      required: true
+    rank:
+      type: string
+      required: true
+    branch:
+      type: string
+      required: true
+    superior:
+      type: string
+      required: true
+    description:
+      type: string
+      required: false
     profile_picture:
       type: string
       format: base64
       required: false
-    description:
+    phone:
       type: string
       required: false
+      example: 000-000-0000
 
 User:
   type: object
   properties:
-    display_name:
+    name:
       type: string
       required: true
-    phone:
-      type: string
-      required: true
-      example: 000-000-0000
     email:
       type: string
-      required: false
+      required: true
       example: user@mail.com
-    profile_picture:
+    grade:
+      type: string
+      required: true
+    rank:
+      type: string
+      required: true
+    dod:
+      type: string
+      required: true
+    branch:
       type: string
       required: true
     description:
-      type: string
-      required: false
-    role:
-      type: string
-      required: false
-    rank:
       type: string
       required: false
     superior:
       type: string
       required: false
-    subordinates:
-      type: array
-      example: []
-      required: false
+    # subordinates:
+    #   type: array
+    #   example: []
+    #   required: false
     signature:
       type: string
       required: false
-    user_status:
-      type: integer
-      required: true
+    # user_status:
+    #   type: integer
+    #   required: true
+    phone:
+      type: string
+      required: false
+      example: 000-000-0000
+    profile_picture:
+      type: string
+      required: false
 
 UserUpdate:
   type: object
   properties:
-    display_name:
+    name:
       type: string
+      required: false
+    grade:
+      type: string
+      required: false
+    rank:
+      type: string
+      required: false
+    branch:
+      type: string
+      required: false
+    superior:
+      type: string
+      required: false
+    description:
+      type: string
+      required: false
+    profile_picture:
+      type: string
+      format: base64
       required: false
     phone:
       type: string
       required: false
       example: 000-000-0000
-    email:
-      type: string
-      required: false
-      example: user@mail.com
-    profile_picture:
-      type: string
-      format: base64
-      required: false
-    description:
-      type: string
-      required: false
-    signature:
-      type: string
-      required: false
