@@ -179,7 +179,7 @@ def update_user() -> Response:
         if "profile_picture" in user:
             profile_picture_path = user.get("profile_picture")
         else:
-            profile_picture_path = "profile_picture/" + str(uuid4)
+            profile_picture_path = "profile_picture/" + str(uuid4())
             user_ref.update({"profile_picture": profile_picture_path})
         blob = bucket.blob(profile_picture_path)
         blob.upload_from_string(

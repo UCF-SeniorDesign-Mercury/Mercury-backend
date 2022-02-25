@@ -124,7 +124,7 @@ def upload_file() -> Response:
             blob.upload_from_string(data.get("signature"), content_type="image")
         except:
             raise InternalServerError("Could not save signature")
-        user_ref.update({"signature": signature_id})
+        user_ref.update({"signature": signature_path})
 
     return Response(response="File added", status=201)
 
