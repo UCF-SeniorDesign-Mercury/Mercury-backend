@@ -179,7 +179,10 @@ File:
     status:
       type: integer
       required: true
-      description: resubmit = 3, Approved = 4, Rejected = 5
+      description: submited = 1, pending = 2, resubmit = 3, approved = 4, rejected = 5
+    recommender:
+      type: string
+      required: false
     timestamp:
       type: date-time
       required: true
@@ -190,7 +193,7 @@ UploadFile:
   properties:
     filename:
       type: string
-      example: 1380_Blank.pdf
+      example: 1380_form.pdf, rst_request.pdf
       required: true
     reviewer:
       type: string
@@ -201,7 +204,9 @@ UploadFile:
       format: byte
       required: true
       description: A file encoded in Base64
-
+    recommender:
+      type: string
+      required: false
     signature:
       type: string
       format: base64

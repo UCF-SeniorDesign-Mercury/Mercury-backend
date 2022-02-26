@@ -82,13 +82,16 @@ def upload_file() -> Response:
 
     # Exceptions
     if "file" in data:
-        file = data["file"]
+        file = data.get("file")
     else:
         raise BadRequest("There was no file provided")
 
-    if data.get("filename") and splitext(data.get("filename"))[1] != ".pdf":
+    if (
+        data.get("filename") != "rst_request.pdf"
+        and data.get("filename") != "1380_form.pdf"
+    ):
         raise UnsupportedMediaType(
-            "Unsupported media type. The endpoint only accepts PDFs"
+            "Unsupported file. The endpoint only accepts rst_request.pdf and 1380_form.pdf"
         )
 
     if user.get("signature") == None and data.get("signature") == None:
@@ -106,6 +109,12 @@ def upload_file() -> Response:
     entry["status"] = 1
     entry["reviewer"] = data.get("reviewer")
     entry["comment"] = ""
+    if "recommender" in data and data.get("filename") == "rst_request.pdf":
+        entry["recommender"] = data.get("recommender")
+        # notification send to recommender
+    # else:
+    # notification send to reviewer
+
     db.collection("Files").document(file_id).set(entry)
 
     try:
@@ -327,7 +336,7 @@ def update_file():
     file_ref = db.collection("Files").document(data.get("file_id"))
     if file_ref.get().exists == False:
         raise NotFound("The file not found")
-    file = file_ref.get().to_dict()
+    file: dict = file_ref.get().to_dict()
 
     # exceptions
     if not file_ref.get().exists:
@@ -341,6 +350,18 @@ def update_file():
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
+
+    # Only rst_request.pdf could have recommender
+    if "recommender" in data and files.get("filename") != "rst_request.pdf":
+        raise BadRequest("Only rst_request files could have recommender")
+
+    if "recommender" in data:
+        file_ref.update({"recommender": data.get("recommender")})
+        # notification send to recommender
+
+    if "reviewer" in data:
+        file_ref.update({"reviewer": data.get("reviewer")})
+        # notification send to reviewer
 
     # if filename in the request update it
     if "filename" in data:
@@ -439,6 +460,8 @@ def change_status():
         file_ref.update({"comment": data.get("comment")})
 
     file_ref.update({"status": data.get("decision")})
+
+    # notified user the decision
 
     return Response("Status changed", 200)
 
@@ -653,7 +676,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", uid)
+                .where(["reviewer", "recommender"], "==", uid)
                 .where("status", "==", status)
                 .where("filename", "==", filename)
                 .limit(page_limit)
@@ -663,7 +686,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", uid)
+                .where(["reviewer", "recommender"], "==", uid)
                 .where("status", "==", status)
                 .limit(page_limit)
                 .stream()
@@ -672,7 +695,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", uid)
+                .where(["reviewer", "recommender"], "==", uid)
                 .where("filename", "==", filename)
                 .limit(page_limit)
                 .stream()
@@ -681,7 +704,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", uid)
+                .where(["reviewer", "recommender"], "==", uid)
                 .limit(page_limit)
                 .stream()
             )
