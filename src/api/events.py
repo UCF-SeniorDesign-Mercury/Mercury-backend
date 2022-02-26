@@ -84,7 +84,7 @@ def create_event() -> Response:
     entry["description"] = data.get("description")
 
     # write to Firestore DB
-    db.collection("Scheduled-Events").document(data.get("event_id")).set(entry)
+    db.collection("Scheduled-Events").document(entry.get("event_id")).set(entry)
 
     # return Response 201 for successfully creating a new resource
     return Response(response="Event added", status=201)
