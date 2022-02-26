@@ -185,6 +185,16 @@ def update_user() -> Response:
             data.get("profile_picture"), content_type="image"
         )
 
+    if "signature" in data:
+        signature_picture_path: str = ""
+        if "signature" in user:
+            signature_picture_path = user.get("signature")
+        else:
+            profile_picture_path = "signature/" + str(uuid4())
+            user_ref.update({"signature": signature_picture_path})
+        blob = bucket.blob(signature_picture_path)
+        blob.upload_from_string(data.get("signature"), content_type="image")
+
     return Response("Successfully update user data", 200)
 
 

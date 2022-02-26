@@ -201,7 +201,6 @@ UploadFile:
       example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     file:
       type: string
-      format: byte
       required: true
       description: A file encoded in Base64
     recommender:
@@ -223,11 +222,9 @@ UserFiles:
     reviewer:
       type: string
       required: true
-      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     author:
       type: string
       required: true
-      example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
     id:
       type: string
       required: true
@@ -252,10 +249,6 @@ UpdateFile:
       type: string
       example: f15bf339-7ac2-4f39-a5a8-a292fc34c241
       required: true
-    filename:
-      type: string
-      required: false
-      example: 1380_Blank.pdf
     file:
       type: string
       format: byte
@@ -381,6 +374,10 @@ UserUpdate:
       type: string
       required: false
     profile_picture:
+      type: string
+      format: base64
+      required: false
+    signature:
       type: string
       format: base64
       required: false

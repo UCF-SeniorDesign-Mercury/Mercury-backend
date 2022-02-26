@@ -11,14 +11,12 @@
         get_user_files()
         get_next_user_files_page()
 """
-from datetime import datetime
 from src.common.decorators import check_token
 from src.common.database import db
 from src.api import Blueprint
 from firebase_admin import storage, auth, firestore
 from flask import Response, request, jsonify
 from uuid import uuid4
-from os.path import splitext
 from werkzeug.exceptions import (
     InternalServerError,
     BadRequest,
@@ -351,25 +349,17 @@ def update_file():
             "The user is not authorized to retrieve this content"
         )
 
-    # Only rst_request.pdf could have recommender
-    if "recommender" in data and files.get("filename") != "rst_request.pdf":
-        raise BadRequest("Only rst_request files could have recommender")
+    # # Only rst_request.pdf could have recommender
+    # if "recommender" in data and files.get("filename") != "rst_request.pdf":
+    #     raise BadRequest("Only rst_request files could have recommender")
 
-    if "recommender" in data:
-        file_ref.update({"recommender": data.get("recommender")})
-        # notification send to recommender
+    # if "recommender" in data:
+    #     file_ref.update({"recommender": data.get("recommender")})
+    #     # notification send to recommender
 
-    if "reviewer" in data:
-        file_ref.update({"reviewer": data.get("reviewer")})
-        # notification send to reviewer
-
-    # if filename in the request update it
-    if "filename" in data:
-        if data.get("filename") and splitext(data.get("filename"))[1] != ".pdf":
-            raise UnsupportedMediaType(
-                "Unsupported media type. The endpoint only accepts PDFs"
-            )
-        file_ref.update({"filename": data.get("filename")})
+    # if "reviewer" in data:
+    #     file_ref.update({"reviewer": data.get("reviewer")})
+    #     # notification send to reviewer
 
     # save pdf to firestore storage
     bucket = storage.bucket()
@@ -437,7 +427,12 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    reviewer: str = decoded_token.get("uid")
+    uid: str = decoded_token.get("uid")
+    # get the user table
+    reviewer_ref = db.collection("User").document(uid).get()
+    if reviewer_ref.exists == False:
+        raise NotFound("The user was not found")
+    reviewer: dict = reviewer_ref.to_dict()
     data: dict = request.get_json()
 
     # exceptions
@@ -451,7 +446,10 @@ def change_status():
     file: dict = file_ref.get().to_dict()
 
     # Only the reviewer, and admin have access to change the status of the file
-    if reviewer != file.get("reviewer") and decoded_token.get("admin") != True:
+    if (
+        reviewer.get("name") != file.get("reviewer")
+        and decoded_token.get("admin") != True
+    ):
         raise Unauthorized(
             "The user is not authorized to retrieve this content"
         )
@@ -626,6 +624,11 @@ def review_user_files() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    # get the user table
+    user_ref = db.collection("User").document(uid).get()
+    if user_ref.exists == False:
+        raise NotFound("The user was not found")
+    user: dict = user_ref.to_dict()
     files: list = []
 
     # Get the page limits, filename, status from the front-end if exists
@@ -668,7 +671,6 @@ def review_user_files() -> Response:
                 .limit(page_limit)
                 .stream()
             )
-
     # Reviewers could only review the files assigned to them
     else:
         # Get the next batch of documents that come after the last document we received a reference to before
@@ -676,7 +678,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where(["reviewer", "recommender"], "==", uid)
+                .where("reviewer", "==", user.get("name"))
                 .where("status", "==", status)
                 .where("filename", "==", filename)
                 .limit(page_limit)
@@ -686,7 +688,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where(["reviewer", "recommender"], "==", uid)
+                .where("reviewer", "==", user.get("name"))
                 .where("status", "==", status)
                 .limit(page_limit)
                 .stream()
@@ -695,7 +697,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where(["reviewer", "recommender"], "==", uid)
+                .where("reviewer", "==", user.get("name"))
                 .where("filename", "==", filename)
                 .limit(page_limit)
                 .stream()
@@ -704,7 +706,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where(["reviewer", "recommender"], "==", uid)
+                .where("reviewer", "==", user.get("name"))
                 .limit(page_limit)
                 .stream()
             )
