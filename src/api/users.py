@@ -149,9 +149,6 @@ def update_user() -> Response:
     bucket = storage.bucket()
 
     # update the user table
-    if "name" in data:
-        user_ref.update({"name": data.get("name")})
-
     if "grade" in data:
         user_ref.update({"grade": data.get("grade")})
         if data.get("grade")[0:1] == "O" or data.get("grade")[0:1] == "W":
@@ -316,7 +313,6 @@ def get_user() -> Response:
 
 @users.get("/get_users")
 @check_token
-@admin_only
 def get_users() -> Response:
     """
     Get a file from Firebase Storage.
@@ -346,7 +342,17 @@ def get_users() -> Response:
             type: boolean
           required: false
         - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+        - in: query
           name: dod
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: superior
           schema:
             type: string
           required: false
@@ -377,10 +383,18 @@ def get_users() -> Response:
     user_docs: list = []
     rank: str = request.args.get("rank", type=str)
     officer: bool = request.args.get("officer", type=bool)
+    name: str = request.args.get("name", type=str)
+    superior: str = request.args.get("superior", type=str)
     dod: str = request.args.get("dod", type=str)
 
     # dod exact search
-    if "dod" in request.args:
+    if "name" in request.args:
+        user_docs = db.collection("User").where("name", "==", name).stream()
+    elif "superior" in request.args:
+        user_docs = (
+            db.collection("User").where("superior", "==", superior).stream()
+        )
+    elif "dod" in request.args:
         user_docs = db.collection("User").where("dod", "==", dod).stream()
     elif "rank" in request.args:
         user_docs = (
@@ -396,6 +410,7 @@ def get_users() -> Response:
             .limit(page_limit)
             .stream()
         )
+
     else:
         user_docs = db.collection("User").limit(page_limit).stream()
 

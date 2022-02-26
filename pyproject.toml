@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mercury-backend-dev"
+name = "mercury-backend"
 version = "0.1.0"
 description = "The backend part of the Mercury project"
 authors = ["Dmitrii Golubenko <d.golubenko@knights.ucf.edu>"]

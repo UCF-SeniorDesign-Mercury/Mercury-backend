@@ -138,7 +138,7 @@ def delete_event(event_id: str) -> Response:
         return NotFound("The event not found")
 
     # Only the event user could delete the event
-    if event["author"] != uid:
+    if event.get("author") != uid:
         return Response(
             "The user is not authorized to retrieve this content", 401
         )
@@ -199,10 +199,10 @@ def update_event() -> Response:
     if not event_ref.get().exists:
         return NotFound("The event was not found")
 
-    # Only the user could delete the event
+    # Only the user could update the event
     if event.get("author") != uid:
         return Unauthorized(
-            "The user is not authorized to retrieve this content", 401
+            "The user is not authorized to retrieve this content"
         )
 
     # update event by given paramter
@@ -342,7 +342,7 @@ def get_events() -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    page_limit: str = request.args.get("page_limit", type=int, default=10)
+    page_limit: int = request.args.get("page_limit", type=int, default=10)
 
     docs: list = (
         db.collection("Scheduled-Events")

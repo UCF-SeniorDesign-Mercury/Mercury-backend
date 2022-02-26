@@ -552,7 +552,7 @@ def get_user_files() -> Response:
 
 @files.get("/review_user_files")
 @check_token
-def get_next_event_page() -> Response:
+def review_user_files() -> Response:
     """
     Get 10 unreviewed user files from Firebase.
     ---

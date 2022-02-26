@@ -201,6 +201,7 @@ UploadFile:
       format: byte
       required: true
       description: A file encoded in Base64
+
     signature:
       type: string
       format: base64
@@ -336,22 +337,18 @@ User:
     branch:
       type: string
       required: true
+    officer:
+      type: boolean
+      required: true
     description:
       type: string
       required: false
     superior:
       type: string
       required: false
-    # subordinates:
-    #   type: array
-    #   example: []
-    #   required: false
     signature:
       type: string
       required: false
-    # user_status:
-    #   type: integer
-    #   required: true
     phone:
       type: string
       required: false
@@ -363,9 +360,6 @@ User:
 UserUpdate:
   type: object
   properties:
-    name:
-      type: string
-      required: false
     grade:
       type: string
       required: false
