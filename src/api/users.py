@@ -12,9 +12,7 @@ from flask import Response, request
 from src.common.decorators import admin_only, check_token
 from werkzeug.exceptions import BadRequest, NotFound
 from firebase_admin import storage, auth
-from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
-from firebase_admin.auth import UserRecord
-from google.cloud import firestore
+from werkzeug.exceptions import BadRequest, NotFound
 from uuid import uuid4
 from flask import jsonify
 
@@ -68,30 +66,35 @@ def register_user() -> Response:
 
     # save data to firestore batabase
     entry: dict = dict()
-    entry["display_name"] = user_data.get("display_name")
-    entry["phone"] = user_data.get("phone")
+    entry["name"] = user_data.get("name")
     entry["email"] = decoded_token.get("email")
     entry["user_status"] = 1
+    entry["dod"] = user_data.get("dod")
+    entry["grade"] = user_data.get("grade")
+    entry["rank"] = user_data.get("rank")
+    entry["branch"] = user_data.get("branch")
+    entry["superior"] = user_data.get("superior")
 
     # if user upload the profile picture
-    bucket = storage.bucket()
-    profile_picture: str = "profile_picture/" + str(uuid4())
     if "profile_picture" in user_data:
+        bucket = storage.bucket()
+        profile_picture: str = "profile_picture/" + str(uuid4())
         blob = bucket.blob(profile_picture)
         blob.upload_from_string(
             user_data["profile_picture"], content_type="image"
         )
         entry["profile_picture"] = profile_picture
-    else:
-        entry[
-            "profile_picture"
-        ] = "profile_picture/f1f720cb-bf7a-4aa3-a9eb-a447753f229e"
 
-    # if user upload the description
     if "description" in user_data:
         entry["description"] = user_data["description"]
+
+    if "phone" in user_data:
+        entry["phone"] = user_data.get("phone")
+
+    if user_data.get("grade")[0:1] == "O" or user_data.get("grade")[0:1] == "W":
+        entry["officer"] = True
     else:
-        entry["description"] = ""
+        entry["officer"] = False
 
     # upload to the user table
     db.collection("User").document(uid).set(entry)
@@ -146,12 +149,25 @@ def update_user() -> Response:
     bucket = storage.bucket()
 
     # update the user table
-    if "display_name" in data:
-        user_ref.update({"display_name": data.get("display_name")})
+    if "grade" in data:
+        user_ref.update({"grade": data.get("grade")})
+        if data.get("grade")[0:1] == "O" or data.get("grade")[0:1] == "W":
+            user_ref.update({"officer": True})
+        else:
+            user_ref.update({"officer": False})
+
+    if "rank" in data:
+        user_ref.update({"rank": data.get("rank")})
+
+    if "branch" in data:
+        user_ref.update({"branch": data.get("branch")})
+
+    if "superior" in data:
+        user_ref.update({"superior": data.get("superior")})
+
     if "phone" in data:
         user_ref.update({"phone": data.get("phone")})
-    if "email" in data:
-        user_ref.update({"email": data.get("email")})
+
     if "description" in data:
         user_ref.update({"description": data.get("description")})
 
@@ -166,14 +182,6 @@ def update_user() -> Response:
         blob.upload_from_string(
             data.get("profile_picture"), content_type="image"
         )
-    if "signature" in data:
-        if "signature" in user:
-            signature_path = user.get("signature")
-        else:
-            signature_path = "signature/" + str(uuid4())
-            user_ref.update({"signature": signature_path})
-        blob = bucket.blob(signature_path)
-        blob.upload_from_string(data.get("signature"), content_type="image")
 
     return Response("Successfully update user data", 200)
 
@@ -303,121 +311,8 @@ def get_user() -> Response:
     return jsonify(user), 200
 
 
-@users.post("/assign_role")
-@check_token
-@admin_only
-def assign_role() -> Response:
-    """
-    Assign a role for newly registered user.
-    ---
-    tags:
-        - users
-    summary: Upon newly registering a user, they are granted a role.
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-    requestBody:
-        content:
-            application/json:
-                schema:
-                    $ref: '#/components/schemas/Role'
-    responses:
-        200:
-            description: Successfully assigned role.
-        404:
-            description: Fail assigned role.
-    """
-    # Decode token to obtain user's firebase id
-    token: str = request.headers["Authorization"]
-    decoded_token: dict = auth.verify_id_token(token)
-
-    # only admin have access to assign role
-    if decoded_token.get("admin") != True:
-        raise Unauthorized(
-            "The user is not authorized to retrieve this content"
-        )
-
-    # Get role and accessLevel
-    data: dict = request.get_json()
-    email: str = data.get("email")
-    role: str = data.get("role")
-    level: str = data.get("level")
-    rank: str = data.get("rank")
-    user: UserRecord = auth.get_user_by_email(email)
-    current_custom_claims = user.custom_claims
-
-    # Reference to user document
-    user_ref = db.collection("User").document(user.uid)
-    if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
-
-    # User has no previous role in their custom claims
-    if current_custom_claims is None:
-        auth.set_custom_user_claims(
-            user.uid, {role: True, "accessLevel": level}
-        )
-    # User has a role set previously
-    else:
-        current_custom_claims["accessLevel"] = level
-        current_custom_claims[role] = True
-
-        auth.set_custom_user_claims(user.uid, current_custom_claims)
-
-    user_ref.update({"role": role})
-
-    if "rank" in data:
-        user_ref.update({"rank": rank})
-
-    return Response("Successfully assigned role", 200)
-
-
-@users.delete("/revoke_role/<email>")
-@check_token
-@admin_only
-def revoke_role(email: str) -> Response:
-    """
-    Remove a role from a specificed user. Level is also updated if it's affected by the removal of role
-    ---
-    tags:
-        - users
-    summary: Upon newly registering a user, they are granted a role.
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-    responses:
-        200:
-            description: Successfully removing role.
-        404:
-            description: Fail removing role.
-    """
-    user_record = auth.get_user_by_email(email)
-
-    # Reference to user document
-    user_ref = db.collection("User").document(user_record.uid)
-    if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
-    user: dict = user_ref.get().to_dict()
-
-    # remove the custom user claims
-    auth.set_custom_user_claims(
-        user_record.uid, {user.get("role"): None, "accessLevel": None}
-    )
-
-    # update user table
-    user_ref.update({"role": firestore.DELETE_FIELD})
-
-    return Response("Successfully removing role", 200)
-
-
 @users.get("/get_users")
 @check_token
-@admin_only
 def get_users() -> Response:
     """
     Get a file from Firebase Storage.
@@ -442,12 +337,22 @@ def get_users() -> Response:
             type: integer
           required: false
         - in: query
-          name: role
+          name: officer
+          schema:
+            type: boolean
+          required: false
+        - in: query
+          name: name
           schema:
             type: string
           required: false
         - in: query
-          name: email
+          name: dod
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: superior
           schema:
             type: string
           required: false
@@ -477,33 +382,20 @@ def get_users() -> Response:
 
     user_docs: list = []
     rank: str = request.args.get("rank", type=str)
-    role: str = request.args.get("role", type=str)
-    email: str = request.args.get("email", type=str)
+    officer: bool = request.args.get("officer", type=bool)
+    name: str = request.args.get("name", type=str)
+    superior: str = request.args.get("superior", type=str)
+    dod: str = request.args.get("dod", type=str)
 
-    # email exact search
-    if "email" in request.args:
+    # dod exact search
+    if "name" in request.args:
+        user_docs = db.collection("User").where("name", "==", name).stream()
+    elif "superior" in request.args:
         user_docs = (
-            db.collection("User")
-            .where("email", "==", email)
-            .limit(page_limit)
-            .stream()
+            db.collection("User").where("superior", "==", superior).stream()
         )
-    # both status and filename fuzzy search
-    elif "role" in request.args and "rank" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("role", "==", role)
-            .where("rank", "==", rank)
-            .limit(page_limit)
-            .stream()
-        )
-    elif "role" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("role", "==", role)
-            .limit(page_limit)
-            .stream()
-        )
+    elif "dod" in request.args:
+        user_docs = db.collection("User").where("dod", "==", dod).stream()
     elif "rank" in request.args:
         user_docs = (
             db.collection("User")
@@ -511,6 +403,14 @@ def get_users() -> Response:
             .limit(page_limit)
             .stream()
         )
+    elif "officer" in request.args:
+        user_docs = (
+            db.collection("User")
+            .where("officer", "==", officer)
+            .limit(page_limit)
+            .stream()
+        )
+
     else:
         user_docs = db.collection("User").limit(page_limit).stream()
 

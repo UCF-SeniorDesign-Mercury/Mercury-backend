@@ -550,15 +550,15 @@ def get_user_files() -> Response:
     return jsonify(files), 200
 
 
-@files.get("/get_next_user_files_page")
+@files.get("/review_user_files")
 @check_token
-def get_next_event_page() -> Response:
+def review_user_files() -> Response:
     """
-    Get next 10 user files from Firebase.
+    Get 10 unreviewed user files from Firebase.
     ---
     tags:
         - files
-    summary: Get next 10 user files from Firebase by passing file id.
+    summary: Get 10 unreviewed user files from Firebase.
     parameters:
         - in: header
           name: Authorization
@@ -570,11 +570,6 @@ def get_next_event_page() -> Response:
           schema:
             type: integer
           required: false
-        - in: query
-          name: ID
-          schema:
-            type: string
-          required: true
         - in: query
           name: status
           schema:
@@ -608,185 +603,88 @@ def get_next_event_page() -> Response:
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
-
-    document: list = []
     files: list = []
 
-    # Get ID of last event from client-side
-    file_id: str = request.args.get("ID", type=str)
     # Get the page limits, filename, status from the front-end if exists
     page_limit: int = request.args.get("page_limit", default=10, type=int)
     filename: str = request.args.get("filename", type=str)
     status: int = request.args.get("status", type=int)
 
-    # Get reference to document with that ID
-    last_ref = db.collection("Files").where("id", "==", file_id).stream()
-    for doc in last_ref:
-        document.append(doc.to_dict())
+    # Admins could review all files
+    if decoded_token.get("admin") == True:
+        # Get the next batch of documents that come after the last document we received a reference to before
+        if "status" in request.args and "filename" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("status", "==", status)
+                .where("filename", "==", filename)
+                .limit(page_limit)
+                .stream()
+            )
+        elif "status" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("status", "==", status)
+                .limit(page_limit)
+                .stream()
+            )
+        elif "filename" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("filename", "==", filename)
+                .limit(page_limit)
+                .stream()
+            )
+        else:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .limit(page_limit)
+                .stream()
+            )
 
-    # Get the next batch of documents that come after the last document we received a reference to before
-    if "status" in request.args and "filename" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("author", "==", uid)
-            .where("status", "==", status)
-            .where("filename", "==", filename)
-            .start_after(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-    elif "status" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("author", "==", uid)
-            .where("status", "==", status)
-            .start_after(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-    elif "filename" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("author", "==", uid)
-            .where("filename", "==", filename)
-            .start_after(document[0])
-            .limit(page_limit)
-            .stream()
-        )
+    # Reviewers could only review the files assigned to them
     else:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("author", "==", uid)
-            .start_after(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-
-    for doc in file_docs:
-        files.append(doc.to_dict())
-
-    return jsonify(files), 200
-
-
-@files.get("/get_pre_user_files_page")
-@check_token
-def get_pre_event_page() -> Response:
-    """
-    Get pre 10 user files from Firebase.
-    ---
-    tags:
-        - files
-    summary: Get pre 10 user files from Firebase by passing file id.
-    parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-          required: true
-        - in: query
-          name: page_limit
-          schema:
-            type: integer
-          required: false
-        - in: query
-          name: ID
-          schema:
-            type: string
-          required: true
-        - in: query
-          name: status
-          schema:
-            type: integer
-          required: false
-        - in: query
-          name: filename
-          schema:
-            type: string
-          required: false
-    responses:
-        200:
-            content:
-                application/json:
-                    schema:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/UserFiles'
-        400:
-            description: Bad request
-        401:
-            description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
-        500:
-            description: Internal API Error
-    """
-    # check tokens and get uid from token
-    token: str = request.headers["Authorization"]
-    decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token.get("uid")
-
-    document: list = []
-    files: list = []
-
-    # Get ID of last event from client-side
-    file_id: str = request.args.get("ID", type=str)
-    # Get the page limits, filename, status from the front-end if exists
-    page_limit: int = request.args.get("page_limit", default=10, type=int)
-    filename: str = request.args.get("filename", type=str)
-    status: int = request.args.get("status", type=int)
-
-    # Get reference to document with that ID
-    last_ref = db.collection("Files").where("id", "==", file_id).stream()
-    for doc in last_ref:
-        document.append(doc.to_dict())
-
-    # Get the next batch of documents that come after the last document we received a reference to before
-    if "status" in request.args and "filename" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.ASCENDING)
-            .where("author", "==", uid)
-            .where("status", "==", status)
-            .where("filename", "==", filename)
-            .end_before(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-    elif "status" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.ASCENDING)
-            .where("author", "==", uid)
-            .where("status", "==", status)
-            .end_before(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-    elif "filename" in request.args:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.ASCENDING)
-            .where("author", "==", uid)
-            .where("filename", "==", filename)
-            .end_before(document[0])
-            .limit(page_limit)
-            .stream()
-        )
-    else:
-        file_docs = (
-            db.collection("Files")
-            .order_by("timestamp", direction=firestore.Query.ASCENDING)
-            .where("author", "==", uid)
-            .end_before(document[0])
-            .limit(page_limit)
-            .stream()
-        )
+        # Get the next batch of documents that come after the last document we received a reference to before
+        if "status" in request.args and "filename" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("reviewer", "==", uid)
+                .where("status", "==", status)
+                .where("filename", "==", filename)
+                .limit(page_limit)
+                .stream()
+            )
+        elif "status" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("reviewer", "==", uid)
+                .where("status", "==", status)
+                .limit(page_limit)
+                .stream()
+            )
+        elif "filename" in request.args:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("reviewer", "==", uid)
+                .where("filename", "==", filename)
+                .limit(page_limit)
+                .stream()
+            )
+        else:
+            file_docs = (
+                db.collection("Files")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("reviewer", "==", uid)
+                .limit(page_limit)
+                .stream()
+            )
 
     for doc in file_docs:
         files.append(doc.to_dict())
