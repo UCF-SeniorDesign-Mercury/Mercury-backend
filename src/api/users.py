@@ -87,6 +87,8 @@ def register_user() -> Response:
 
     if "description" in user_data:
         entry["description"] = user_data["description"]
+        if "Commander" in entry["description"]:
+            entry["commander"] = True
 
     if "phone" in user_data:
         entry["phone"] = user_data.get("phone")
@@ -327,7 +329,7 @@ def get_users() -> Response:
             type: string
           required: true
         - in: query
-          name: rank
+          name: target
           schema:
             type: string
           required: false
@@ -335,26 +337,6 @@ def get_users() -> Response:
           name: page_limit
           schema:
             type: integer
-          required: false
-        - in: query
-          name: officer
-          schema:
-            type: boolean
-          required: false
-        - in: query
-          name: name
-          schema:
-            type: string
-          required: false
-        - in: query
-          name: dod
-          schema:
-            type: string
-          required: false
-        - in: query
-          name: superior
-          schema:
-            type: string
           required: false
     responses:
         200:
@@ -381,36 +363,24 @@ def get_users() -> Response:
         page_limit = request.args.get("page_limit", default=10, type=int)
 
     user_docs: list = []
-    rank: str = request.args.get("rank", type=str)
-    officer: bool = request.args.get("officer", type=bool)
-    name: str = request.args.get("name", type=str)
-    superior: str = request.args.get("superior", type=str)
-    dod: str = request.args.get("dod", type=str)
+    target: str = request.args.get("target", type=str)
 
-    # dod exact search
-    if "name" in request.args:
-        user_docs = db.collection("User").where("name", "==", name).stream()
-    elif "superior" in request.args:
-        user_docs = (
-            db.collection("User").where("superior", "==", superior).stream()
-        )
-    elif "dod" in request.args:
-        user_docs = db.collection("User").where("dod", "==", dod).stream()
-    elif "rank" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("rank", "==", rank)
-            .limit(page_limit)
-            .stream()
-        )
-    elif "officer" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("officer", "==", officer)
-            .limit(page_limit)
-            .stream()
-        )
-
+    # exact search
+    if "target" in request.args:
+        if target == "officer":
+            user_docs = (
+                db.collection("User")
+                .where("officer", "==", True)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == "commander":
+            user_docs = (
+                db.collection("User")
+                .where("commander", "==", True)
+                .limit(page_limit)
+                .stream()
+            )
     else:
         user_docs = db.collection("User").limit(page_limit).stream()
 
