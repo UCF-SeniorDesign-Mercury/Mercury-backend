@@ -9,7 +9,9 @@
         update_file()
         upload_file()
         get_user_files()
-        get_next_user_files_page()
+        review_user_files()
+        get_recommend_files()
+        give_recommendation()
 """
 from src.common.decorators import check_token
 from src.common.database import db
