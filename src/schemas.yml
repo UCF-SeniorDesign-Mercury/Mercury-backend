@@ -301,6 +301,9 @@ UserRegister:
     superior:
       type: string
       required: true
+    level:
+      type: integer
+      required: true
     description:
       type: string
       required: false
@@ -338,6 +341,9 @@ User:
     officer:
       type: boolean
       required: true
+    level:
+      type: integer
+      required: true
     description:
       type: string
       required: false
@@ -366,6 +372,9 @@ UserUpdate:
       required: false
     branch:
       type: string
+      required: false
+    level:
+      type: integer
       required: false
     superior:
       type: string

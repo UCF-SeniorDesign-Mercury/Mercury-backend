@@ -74,6 +74,7 @@ def register_user() -> Response:
     entry["rank"] = user_data.get("rank")
     entry["branch"] = user_data.get("branch")
     entry["superior"] = user_data.get("superior")
+    entry["level"] = user_data.get("level")
 
     # if user upload the profile picture
     if "profile_picture" in user_data:
@@ -169,6 +170,9 @@ def update_user() -> Response:
 
     if "phone" in data:
         user_ref.update({"phone": data.get("phone")})
+
+    if "level" in data:
+        user_ref.update({"level": data.get("level")})
 
     if "description" in data:
         user_ref.update({"description": data.get("description")})
@@ -388,6 +392,21 @@ def get_users() -> Response:
             user_docs = (
                 db.collection("User")
                 .where("commander", "==", True)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == "level":
+            token: str = request.headers["Authorization"]
+            decoded_token: dict = auth.verify_id_token(token)
+            uid: str = decoded_token.get("uid")
+            # check if the user exists
+            user_ref = db.collection("User").document(uid)
+            if user_ref.get().exists == False:
+                raise NotFound("The user was not found")
+            level: str = user_ref.get().to_dict().get("level")
+            user_docs = (
+                db.collection("User")
+                .where("level", ">", level)
                 .limit(page_limit)
                 .stream()
             )
