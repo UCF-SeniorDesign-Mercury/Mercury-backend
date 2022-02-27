@@ -146,9 +146,13 @@ File:
   id: File
   type: object
   properties:
+    filetype:
+      type: string
+      example: 1380_form
+      required: true
     filename:
       type: string
-      example: 1380_Blank.pdf
+      example: 1380_form.pdf
       required: true
     reviewer:
       type: string
@@ -191,7 +195,7 @@ File:
 UploadFile:
   type: object
   properties:
-    filename:
+    filetype:
       type: string
       example: 1380_form.pdf, rst_request.pdf
       required: true
@@ -215,9 +219,13 @@ UploadFile:
 UserFiles:
   type: object
   properties:
-    filename:
+    filetype:
       type: string
       example: 1380_Blank.pdf
+      required: true
+    filename:
+      type: string
+      example: 1380_form.pdf
       required: true
     reviewer:
       type: string
@@ -254,6 +262,10 @@ UpdateFile:
       format: byte
       required: false
       description: A file encoded in Base64
+    filename:
+      type: string
+      example: 1380_form.pdf
+      required: false
     signature:
       type: string
       format: base64
@@ -278,6 +290,19 @@ FileStatus:
       required: false
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
+
+FileRecommend:
+  type: object
+  properties:
+    file_id:
+      type: string
+      required: true
+      description: this is the file id
+      example: 623b6109-dc7b-4e1a-8562-f93160c743b1
+    is_recommend:
+      type: boolean
+      required: true
+      decription: recommend = true, non recommend = false
 
 # --------------------------------- User ------------------------------- #
 UserRegister:
