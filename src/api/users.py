@@ -62,7 +62,7 @@ def register_user() -> Response:
     # check if the user is in the table or not
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == True:
-        raise BadRequest("The user already registered")
+        return BadRequest("The user already registered")
 
     # save data to firestore batabase
     entry: dict = dict()
@@ -147,7 +147,7 @@ def update_user() -> Response:
     # check if the user is in the table or not
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
     bucket = storage.bucket()
 
@@ -233,7 +233,7 @@ def delete_user(uid: str) -> Response:
     # get the user date from the user table
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
     # delete the signature and profile_picture from firebase storage
@@ -295,7 +295,7 @@ def get_user() -> Response:
     # check if the user exists
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
 
     user: dict = user_ref.get().to_dict()
 
@@ -307,7 +307,7 @@ def get_user() -> Response:
         blob = bucket.blob(signature_path)
 
         if not blob.exists():
-            raise NotFound("The signature not found.")
+            return NotFound("The signature not found.")
 
         # download the signature image
         signature = blob.download_as_bytes()
@@ -318,7 +318,7 @@ def get_user() -> Response:
         blob = bucket.blob(profile_picture_path)
 
         if not blob.exists():
-            raise NotFound("The profile picture not found.")
+            return NotFound("The profile picture not found.")
 
         # download the profile_picture image
         profile_picture = blob.download_as_bytes()
@@ -402,7 +402,7 @@ def get_users() -> Response:
             # check if the user exists
             user_ref = db.collection("User").document(uid)
             if user_ref.get().exists == False:
-                raise NotFound("The user was not found")
+                return NotFound("The user was not found")
             level: str = user_ref.get().to_dict().get("level")
             user_docs = (
                 db.collection("User")
