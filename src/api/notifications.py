@@ -118,15 +118,15 @@ def get_notifications():
     # Get the page limits, notification_type, read from the front-end if exists
     page_limit: int = request.args.get("page_limit", default=10, type=int)
     file_type: str = request.args.get("file_type", type=str)
-    read: int = request.args.get("read", type=bool)
-
+    read: int = request.args.get("read", type=int)
+    print(read)
     # Get the next batch of review docs
     if "file_type" in request.args and "read" in request.args:
         notification_docs = (
             db.collection("Notification")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("reviewer", "==", uid)
-            .where("read", "==", read)
+            .where("read", "==", read == 1)
             .where("file_type", "==", file_type)
             .limit(page_limit)
             .stream()
@@ -145,7 +145,7 @@ def get_notifications():
             db.collection("Notification")
             .order_by("timestamp", direction=firestore.Query.DESCENDING)
             .where("receiver", "==", uid)
-            .where("read", "==", read)
+            .where("read", "==", read == 1)
             .limit(page_limit)
             .stream()
         )
