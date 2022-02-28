@@ -419,3 +419,27 @@ UserUpdate:
       type: string
       required: false
       example: 000-000-0000
+
+# --------------------------------- Notifications ------------------------------- #
+Notification:
+  type: object
+  properties:
+    notification_type:
+      type: string
+      required: true
+      description: review file, recommend file, file status update
+    sender:
+      type: string
+      required: true
+    receiver:
+      type: string
+      required: true
+    read:
+      type: boolean
+      required: true
+    file_tpye:
+      type: string
+      required: true
+    notification_id:
+      type: string
+      required: true

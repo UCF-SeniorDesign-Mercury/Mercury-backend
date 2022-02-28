@@ -19,6 +19,7 @@ from src.api import Blueprint
 from firebase_admin import storage, auth, firestore
 from flask import Response, request, jsonify
 from uuid import uuid4
+from src.api.notifications import create_notification
 from werkzeug.exceptions import (
     InternalServerError,
     BadRequest,
@@ -115,8 +116,22 @@ def upload_file() -> Response:
         entry["recommender"] = data.get("recommender")
         entry["reviewer_visible"] = False
         # notification send to recommender
-    # else:
-    # notification send to reviewer
+        create_notification(
+            notification_type="recommend file",
+            file_type=data.get("filetype"),
+            sender=uid,
+            receiver_name=data.get("recommender"),
+            receiver_uid=None,
+        )
+    else:
+        # notification send to reviewer
+        create_notification(
+            notification_type="review file",
+            file_type=data.get("filetype"),
+            sender=uid,
+            receiver_name=data.get("reviewer"),
+            receiver_uid=None,
+        )
 
     db.collection("Files").document(file_id).set(entry)
 
@@ -356,13 +371,20 @@ def update_file():
             "The user is not authorized to retrieve this content"
         )
 
-    # # Only rst_request could have recommender
-    # if "recommender" in data and files.get("filetype") != "rst_request":
-    #     return BadRequest("Only rst_request files could have recommender")
+    # Only rst_request could have recommender
+    if "recommender" in data and files.get("filetype") != "rst_request":
+        return BadRequest("Only rst_request files could have recommender")
 
     if "recommender" in data:
         file_ref.update({"recommender": data.get("recommender")})
         # notification send to recommender
+        create_notification(
+            notification_type="recommend " + " file",
+            file_type=data.get("filetype"),
+            sender=uid,
+            receiver_uid=None,
+            receiver_name=data.get("recommender"),
+        )
 
     # if "reviewer" in data:
     #     file_ref.update({"reviewer": data.get("reviewer")})
@@ -470,6 +492,30 @@ def change_status():
     file_ref.update({"status": data.get("decision")})
 
     # notified user the decision
+    if data.get("decision") == 3:
+        create_notification(
+            notification_type="resubmit file",
+            file_type=file.get("filetype"),
+            sender=uid,
+            receiver_uid=file.get("author"),
+            receiver_name=None,
+        )
+    elif data.get("decision") == 4:
+        create_notification(
+            notification_type="file approved",
+            file_type=file.get("filetype"),
+            sender=uid,
+            receiver_uid=file.get("author"),
+            receiver_name=None,
+        )
+    elif data.get("decision") == 5:
+        create_notification(
+            notification_type="file rejected",
+            file_type=file.get("filetype"),
+            sender=uid,
+            receiver_uid=file.get("author"),
+            receiver_name=None,
+        )
 
     return Response("Status changed", 200)
 
@@ -861,6 +907,28 @@ def give_recommendation():
     )
 
     # notified the user the decision
+    if data.get("is_recommend"):
+        create_notification(
+            notification_type="positive recommendation",
+            file_type=file.get("filetype"),
+            sender=uid,
+            receiver_uid=file.get("author"),
+            receiver_name=None,
+        )
+    else:
+        create_notification(
+            notification_type="negative recommendation",
+            file_type=file.get("filetype"),
+            sender=uid,
+            receiver_uid=file.get("author"),
+            receiver_name=None,
+        )
     # notified the reviewer to review this file
-
+    create_notification(
+        notification_type="review file",
+        file_type=file.get("filetype"),
+        sender=uid,
+        receiver_name=file.get("reviewer"),
+        receiver_uid=None,
+    )
     return Response("Recommend post", 200)
