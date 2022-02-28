@@ -58,7 +58,9 @@ def create_notification(
         user: UserRecord = auth.get_user_by_email(email)
         entry["receiver"] = user.uid
 
-    db.collection("Notification").document().set(entry)
+    db.collection("Notification").document(entry.get("notification_id")).set(
+        entry
+    )
 
 
 @notifications.get("/get_notifications")
@@ -163,9 +165,100 @@ def get_notifications():
     return jsonify(notifications), 200
 
 
-def read_notification():
-    pass
+@notifications.put("/read_notification/<notification_id>")
+def read_notification(notification_id: str):
+    """
+    Change the read status of notification.
+    ---
+    tags:
+        - notifications
+    summary: Change the status
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            description: Notification marked as read
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    notification_ref = db.collection("Notification").document(notification_id)
+    if notification_ref.get().exists == False:
+        return NotFound("The notification was not found")
+    notification: dict = notification_ref.get().to_dict()
+
+    if notification.get("receiver") != uid:
+        return Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
+
+    if notification.get("read") == True:
+        return BadRequest("The notification has been read")
+
+    notification_ref.update({"read": True})
+
+    return Response("Notification marked as read", 200)
 
 
-def delete_notification():
-    pass
+@notifications.delete("/delete_notification/<notification_id>")
+def delete_notification(notification_id: str):
+    """
+    Delete a notification
+    ---
+    tags:
+        - notifications
+    summary: Delete a notification.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            description: Notification deleted
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    notification_ref = db.collection("Notification").document(notification_id)
+    if notification_ref.get().exists == False:
+        return NotFound("The notification was not found")
+    notification: dict = notification_ref.get().to_dict()
+
+    if notification.get("receiver") != uid:
+        return Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
+
+    notification_ref.delete()
+
+    return Response("Notification deleted", 200)
