@@ -1,15 +1,4 @@
 {
-    "platformSettings.autoLoad": true,
-    "platformSettings.platforms" : {
-        "win32": {
-            "nodes": {
-                "python.pythonPath": "env\\Scripts\\python.exe",
-                "python.formatting.blackPath": "env\\Scripts\\black.exe"
-            },
-        },
-        "darwin": {},
-        "linux": {},
-    },
     "python.formatting.blackArgs": ["--line-length", "80"],
     "editor.insertSpaces": true,
     "editor.tabSize": 4,

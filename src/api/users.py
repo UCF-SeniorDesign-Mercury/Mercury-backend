@@ -418,3 +418,65 @@ def get_users() -> Response:
         users.append(user.to_dict())
 
     return jsonify(users), 200
+
+
+@users.get("/search_users")
+# @check_token
+def search_users() -> Response:
+    """
+    Search users from Firebase Storage.
+    ---
+    tags:
+        - users
+    summary: Searches a user
+    parameters:
+        - in: header
+            name: Authorization
+            schema:
+                type: string
+                required: true
+        - in: query
+            name: name
+            schema:
+                type: string
+                required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/User'
+        400:
+            description: Name is required
+        404:
+            description: No users found
+        500:
+            description: Internal API Error
+    """
+    # token: str = request.headers["Authorization"]
+    # decoded_token: dict = auth.verify_id_token(token)
+    # uid: str = decoded_token.get("uid")
+    res: list = []
+    uid = "123"
+
+    if not request.args.get("name"):
+        return BadRequest("Name is required")
+
+    user_docs = db.collection("User").stream()
+
+    for user in user_docs:
+        user_dict: dict = user.to_dict()
+
+        if user_dict.get("uid") == uid or not user_dict.get("name"):
+            continue
+        if request.args.get("name") in user_dict.get(
+            "name"
+        ) or request.args.get("name") == user_dict.get("name"):
+            res.append(user_dict)
+
+    if len(res) == 0:
+        return NotFound("No users found")
+
+    return jsonify(res), 200
