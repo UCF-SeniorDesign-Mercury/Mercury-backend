@@ -431,15 +431,15 @@ def search_users() -> Response:
     summary: Searches a user
     parameters:
         - in: header
-            name: Authorization
-            schema:
-                type: string
-                required: true
+          name: Authorization
+          schema:
+            type: string
+          required: true
         - in: query
-            name: name
-            schema:
-                type: string
-                required: true
+          name: name
+          schema:
+            type: string
+            required: true
     responses:
         200:
             content:
