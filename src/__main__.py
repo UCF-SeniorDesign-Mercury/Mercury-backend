@@ -66,6 +66,10 @@ def page_not_found(e) -> Response:
     return jsonify({"Message": "Endpoint doesn't exist"})
 
 
-if __name__ == "__main__":
+def main():
     app.run(host="0.0.0.0", port=int(environ.get("PORT", 8080)), debug=True)
+
+
+if __name__ == "__main__":
+    main()
     # app.run(host="localhost", port=int(environ.get("PORT", 5000)), debug=True)
