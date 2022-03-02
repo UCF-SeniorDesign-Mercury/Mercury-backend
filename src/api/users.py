@@ -90,6 +90,8 @@ def register_user() -> Response:
         entry["description"] = user_data["description"]
         if "Commander" in entry["description"]:
             entry["commander"] = True
+        else:
+            entry["commander"] = False
 
     if "phone" in user_data:
         entry["phone"] = user_data.get("phone")

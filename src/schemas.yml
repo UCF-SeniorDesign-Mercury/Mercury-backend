@@ -197,7 +197,7 @@ UploadFile:
   properties:
     filetype:
       type: string
-      example: 1380_form.pdf, rst_request.pdf
+      example: 1380_form, rst_request
       required: true
     reviewer:
       type: string
@@ -225,7 +225,7 @@ UserFiles:
       required: true
     filename:
       type: string
-      example: 1380_form.pdf
+      example: 1380_form
       required: true
     reviewer:
       type: string

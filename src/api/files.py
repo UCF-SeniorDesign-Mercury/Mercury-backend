@@ -174,8 +174,6 @@ def get_file(file_id: str) -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -429,8 +427,6 @@ def change_status():
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -516,10 +512,6 @@ def get_user_files() -> Response:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -623,10 +615,6 @@ def review_user_files() -> Response:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -759,14 +747,10 @@ def get_recommend_files() -> Response:
                         type: array
                         items:
                             $ref: '#/components/schemas/UserFiles'
-        400:
-            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -821,15 +805,13 @@ def give_recommendation():
                     $ref: '#/components/schemas/FileRecommend'
     responses:
         200:
-            description: Recommend post
+            description: "Recommendation is posted"
         400:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -863,4 +845,4 @@ def give_recommendation():
     # notified the user the decision
     # notified the reviewer to review this file
 
-    return Response("Recommend post", 200)
+    return Response("Recommendation is posted", 200)
