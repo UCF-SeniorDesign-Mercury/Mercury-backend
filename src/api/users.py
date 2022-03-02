@@ -62,7 +62,7 @@ def register_user() -> Response:
     # check if the user is in the table or not
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == True:
-        raise BadRequest("The user already registered")
+        return BadRequest("The user already registered")
 
     # save data to firestore batabase
     entry: dict = dict()
@@ -74,6 +74,7 @@ def register_user() -> Response:
     entry["rank"] = user_data.get("rank")
     entry["branch"] = user_data.get("branch")
     entry["superior"] = user_data.get("superior")
+    entry["level"] = user_data.get("level")
 
     # if user upload the profile picture
     if "profile_picture" in user_data:
@@ -87,6 +88,10 @@ def register_user() -> Response:
 
     if "description" in user_data:
         entry["description"] = user_data["description"]
+        if "Commander" in entry["description"]:
+            entry["commander"] = True
+        else:
+            entry["commander"] = False
 
     if "phone" in user_data:
         entry["phone"] = user_data.get("phone")
@@ -144,7 +149,7 @@ def update_user() -> Response:
     # check if the user is in the table or not
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
     bucket = storage.bucket()
 
@@ -168,6 +173,9 @@ def update_user() -> Response:
     if "phone" in data:
         user_ref.update({"phone": data.get("phone")})
 
+    if "level" in data:
+        user_ref.update({"level": data.get("level")})
+
     if "description" in data:
         user_ref.update({"description": data.get("description")})
 
@@ -182,6 +190,16 @@ def update_user() -> Response:
         blob.upload_from_string(
             data.get("profile_picture"), content_type="image"
         )
+
+    if "signature" in data:
+        signature_picture_path: str = ""
+        if "signature" in user:
+            signature_picture_path = user.get("signature")
+        else:
+            profile_picture_path = "signature/" + str(uuid4())
+            user_ref.update({"signature": signature_picture_path})
+        blob = bucket.blob(signature_picture_path)
+        blob.upload_from_string(data.get("signature"), content_type="image")
 
     return Response("Successfully update user data", 200)
 
@@ -217,7 +235,7 @@ def delete_user(uid: str) -> Response:
     # get the user date from the user table
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
     # delete the signature and profile_picture from firebase storage
@@ -279,7 +297,7 @@ def get_user() -> Response:
     # check if the user exists
     user_ref = db.collection("User").document(uid)
     if user_ref.get().exists == False:
-        raise NotFound("The user was not found")
+        return NotFound("The user was not found")
 
     user: dict = user_ref.get().to_dict()
 
@@ -291,7 +309,7 @@ def get_user() -> Response:
         blob = bucket.blob(signature_path)
 
         if not blob.exists():
-            raise NotFound("The signature not found.")
+            return NotFound("The signature not found.")
 
         # download the signature image
         signature = blob.download_as_bytes()
@@ -302,7 +320,7 @@ def get_user() -> Response:
         blob = bucket.blob(profile_picture_path)
 
         if not blob.exists():
-            raise NotFound("The profile picture not found.")
+            return NotFound("The profile picture not found.")
 
         # download the profile_picture image
         profile_picture = blob.download_as_bytes()
@@ -327,7 +345,7 @@ def get_users() -> Response:
             type: string
           required: true
         - in: query
-          name: rank
+          name: target
           schema:
             type: string
           required: false
@@ -335,26 +353,6 @@ def get_users() -> Response:
           name: page_limit
           schema:
             type: integer
-          required: false
-        - in: query
-          name: officer
-          schema:
-            type: boolean
-          required: false
-        - in: query
-          name: name
-          schema:
-            type: string
-          required: false
-        - in: query
-          name: dod
-          schema:
-            type: string
-          required: false
-        - in: query
-          name: superior
-          schema:
-            type: string
           required: false
     responses:
         200:
@@ -381,36 +379,39 @@ def get_users() -> Response:
         page_limit = request.args.get("page_limit", default=10, type=int)
 
     user_docs: list = []
-    rank: str = request.args.get("rank", type=str)
-    officer: bool = request.args.get("officer", type=bool)
-    name: str = request.args.get("name", type=str)
-    superior: str = request.args.get("superior", type=str)
-    dod: str = request.args.get("dod", type=str)
+    target: str = request.args.get("target", type=str)
 
-    # dod exact search
-    if "name" in request.args:
-        user_docs = db.collection("User").where("name", "==", name).stream()
-    elif "superior" in request.args:
-        user_docs = (
-            db.collection("User").where("superior", "==", superior).stream()
-        )
-    elif "dod" in request.args:
-        user_docs = db.collection("User").where("dod", "==", dod).stream()
-    elif "rank" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("rank", "==", rank)
-            .limit(page_limit)
-            .stream()
-        )
-    elif "officer" in request.args:
-        user_docs = (
-            db.collection("User")
-            .where("officer", "==", officer)
-            .limit(page_limit)
-            .stream()
-        )
-
+    # exact search
+    if "target" in request.args:
+        if target == "officer":
+            user_docs = (
+                db.collection("User")
+                .where("officer", "==", True)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == "commander":
+            user_docs = (
+                db.collection("User")
+                .where("commander", "==", True)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == "level":
+            token: str = request.headers["Authorization"]
+            decoded_token: dict = auth.verify_id_token(token)
+            uid: str = decoded_token.get("uid")
+            # check if the user exists
+            user_ref = db.collection("User").document(uid)
+            if user_ref.get().exists == False:
+                return NotFound("The user was not found")
+            level: str = user_ref.get().to_dict().get("level")
+            user_docs = (
+                db.collection("User")
+                .where("level", ">", level)
+                .limit(page_limit)
+                .stream()
+            )
     else:
         user_docs = db.collection("User").limit(page_limit).stream()
 
