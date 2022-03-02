@@ -207,7 +207,8 @@ def get_file(file_id: str) -> Response:
     if (
         user.get("name") != res.get("reviewer")
         and user.get("name") != res.get("author")
-        and user.get("role") != "admin"
+        and user.get("name") != res.get("recommender")
+        and decoded_token.get("admin") != True
     ):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
