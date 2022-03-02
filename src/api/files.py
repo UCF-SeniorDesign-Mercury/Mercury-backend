@@ -194,8 +194,8 @@ def get_file(file_id: str) -> Response:
 
     # Only the author, reviewer, and admin have access to the data
     if (
-        uid != res.get("reviewer")
-        and uid != res.get("author")
+        user.get("name") != res.get("reviewer")
+        and user.get("name") != res.get("author")
         and user.get("role") != "admin"
     ):
         raise Unauthorized(
