@@ -199,6 +199,9 @@ UploadFile:
       type: string
       example: 1380_form, rst_request
       required: true
+    filename:
+      type: string
+      required: true
     reviewer:
       type: string
       required: true
