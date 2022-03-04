@@ -230,6 +230,8 @@ def get_file(file_id: str) -> Response:
         )
 
     # download the pdf file and add it to the file data
+    if "signature" not in user:
+        return BadRequest("User need upload a signature")
     signature_path: str = user.get("signature")
     blob = bucket.blob(signature_path)
     if not blob.exists():
