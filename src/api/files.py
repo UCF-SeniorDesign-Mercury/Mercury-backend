@@ -206,7 +206,7 @@ def get_file(file_id: str) -> Response:
     # Only the author, reviewer, and admin have access to the data
     if (
         user.get("name") != res.get("reviewer")
-        and user.get("name") != res.get("author")
+        and uid != res.get("author")
         and user.get("name") != res.get("recommender")
         and decoded_token.get("admin") != True
     ):
