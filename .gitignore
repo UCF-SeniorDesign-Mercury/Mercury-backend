@@ -1,7 +1,6 @@
 # Firebase credentials
 key.json
 org.json
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

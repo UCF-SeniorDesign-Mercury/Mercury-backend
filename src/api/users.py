@@ -15,6 +15,7 @@ from firebase_admin import storage, auth
 from werkzeug.exceptions import BadRequest, NotFound
 from uuid import uuid4
 from flask import jsonify
+import json
 
 from src.common.database import db
 from src.api import Blueprint
@@ -129,14 +130,10 @@ def update_user() -> Response:
     responses:
         201:
             description: Successfully update user data
-        400:
-            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -223,8 +220,6 @@ def delete_user(uid: str) -> Response:
     responses:
         200:
             description: User deleted
-        400:
-            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
@@ -285,8 +280,6 @@ def get_user() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -333,11 +326,11 @@ def get_user() -> Response:
 @check_token
 def get_users() -> Response:
     """
-    Get a file from Firebase Storage.
+    Get users from Firebase.
     ---
     tags:
         - users
-    summary: Gets a file
+    summary: Get users
     parameters:
         - in: header
           name: Authorization
@@ -368,8 +361,6 @@ def get_users() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -422,15 +413,15 @@ def get_users() -> Response:
     return jsonify(users), 200
 
 
-@users.get("/search_users")
-# @check_token
-def search_users() -> Response:
+@users.get("get_subordinates")
+@check_token
+def get_subordinate() -> Response:
     """
-    Search users from Firebase Storage.
+    Get all subordinates for this user.
     ---
     tags:
         - users
-    summary: Searches a user
+    summary: Gets all subordinates
     parameters:
         - in: header
           name: Authorization
@@ -441,44 +432,70 @@ def search_users() -> Response:
           name: name
           schema:
             type: string
-            required: true
+          required: false
+        - in: query
+          name: dod
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
                 application/json:
                     schema:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/User'
+                        type: object
         400:
-            description: Name is required
-        404:
-            description: No users found
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
         500:
             description: Internal API Error
     """
-    # token: str = request.headers["Authorization"]
-    # decoded_token: dict = auth.verify_id_token(token)
-    # uid: str = decoded_token.get("uid")
-    res: list = []
-    uid = "123"
+    name: str = request.args.get("name", type=str)
+    dod: str = request.args.get("dod", type=str)
+    bucket = storage.bucket()
+    org_json_path: str = "org/org.json"
+    if "name" in request.args:
+        blob = bucket.blob(org_json_path)
+        if not blob.exists():
+            return NotFound("The org chart file not found")
 
-    if not request.args.get("name"):
-        return BadRequest("Name is required")
+        # download the signature image
+        org_file: str = blob.download_as_bytes().decode("utf-8")
+        org: list = json.loads(org_file).get("org")
+        subordinates: list = find_subordinates_by_name(org, name)
+        return jsonify(subordinates), 200
 
-    user_docs = db.collection("User").stream()
+    elif "dod" in request.args:
+        blob = bucket.blob(org_json_path)
+        if not blob.exists():
+            return NotFound("The org chart file not found")
 
-    for user in user_docs:
-        user_dict: dict = user.to_dict()
+        # download the signature image
+        org_file: str = blob.download_as_bytes().decode("utf-8")
+        org: list = json.loads(org_file).get("org")
+        subordinates: list = find_subordinates_by_dod(org, dod)
+    else:
+        return BadRequest("At least one paramater required")
 
-        if user_dict.get("uid") == uid or not user_dict.get("name"):
+    return jsonify(subordinates), 200
+
+
+def find_subordinates_by_name(org: list, name: str) -> list:
+    for people in org:
+        if people.get("name") == name:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_name(people.get("sub"), name)
+        else:
             continue
-        if request.args.get("name") in user_dict.get(
-            "name"
-        ) or request.args.get("name") == user_dict.get("name"):
-            res.append(user_dict)
 
-    if len(res) == 0:
-        return NotFound("No users found")
 
-    return jsonify(res), 200
+def find_subordinates_by_dod(org: list, dod: str) -> list:
+    for people in org:
+        if people.get("dod") == dod:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_dod(people.get("sub"), dod)
+        else:
+            continue
