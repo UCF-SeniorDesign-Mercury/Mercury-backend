@@ -15,6 +15,7 @@ from firebase_admin import storage, auth
 from werkzeug.exceptions import BadRequest, NotFound
 from uuid import uuid4
 from flask import jsonify
+import json
 
 from src.common.database import db
 from src.api import Blueprint
@@ -333,11 +334,11 @@ def get_user() -> Response:
 @check_token
 def get_users() -> Response:
     """
-    Get a file from Firebase Storage.
+    Get users from Firebase.
     ---
     tags:
         - users
-    summary: Gets a file
+    summary: Get users
     parameters:
         - in: header
           name: Authorization
@@ -420,3 +421,95 @@ def get_users() -> Response:
         users.append(user.to_dict())
 
     return jsonify(users), 200
+
+
+@users.get("get_subordinates")
+@check_token
+def get_subordinate() -> Response:
+    """
+    Get all subordinates for this user.
+    ---
+    tags:
+        - users
+    summary: Gets all subordinates
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: dod
+          schema:
+            type: string
+          required: false
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: object
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    name: str = request.args.get("name", type=str)
+    dod: str = request.args.get("dod", type=str)
+    bucket = storage.bucket()
+    org_json_path: str = "org/org.json"
+    if "name" in request.args:
+        blob = bucket.blob(org_json_path)
+        if not blob.exists():
+            return NotFound("The org chart file not found")
+
+        # download the signature image
+        org_file: str = blob.download_as_bytes().decode("utf-8")
+        org: list = json.loads(org_file).get("org")
+        subordinates: list = find_subordinates_by_name(org, name)
+        return jsonify(subordinates), 200
+
+    elif "dod" in request.args:
+        blob = bucket.blob(org_json_path)
+        if not blob.exists():
+            return NotFound("The org chart file not found")
+
+        # download the signature image
+        org_file: str = blob.download_as_bytes().decode("utf-8")
+        org: list = json.loads(org_file).get("org")
+        subordinates: list = find_subordinates_by_dod(org, dod)
+    else:
+        return BadRequest("At least on paramater required")
+
+    return jsonify(subordinates), 200
+
+
+def find_subordinates_by_name(org: list, name: str) -> list:
+    for people in org:
+        if people.get("name") == name:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_name(people.get("sub"), name)
+        else:
+            continue
+
+
+def find_subordinates_by_dod(org: list, dod: str) -> list:
+    for people in org:
+        if people.get("dod") == dod:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_dod(people.get("sub"), dod)
+        else:
+            continue
