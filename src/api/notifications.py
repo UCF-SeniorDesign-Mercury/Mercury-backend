@@ -8,7 +8,6 @@
         read_notifications()
         delete_notifications()
 """
-import email
 from firebase_admin import auth, firestore
 from firebase_admin.auth import UserRecord
 from flask import Response, jsonify, request
@@ -17,7 +16,7 @@ from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
 from src.common.database import db
-from src.common.decorators import admin_only, check_token
+from src.common.decorators import check_token
 
 notifications: Blueprint = Blueprint("notifications", __name__)
 
@@ -64,6 +63,7 @@ def create_notification(
 
 
 @notifications.get("/get_notifications")
+@check_token
 def get_notifications():
     """
     Get 10 unread notifications.
@@ -166,6 +166,7 @@ def get_notifications():
 
 
 @notifications.put("/read_notification/<notification_id>")
+@check_token
 def read_notification(notification_id: str):
     """
     Change the read status of notification.
@@ -217,6 +218,7 @@ def read_notification(notification_id: str):
 
 
 @notifications.delete("/delete_notification/<notification_id>")
+@check_token
 def delete_notification(notification_id: str):
     """
     Delete a notification
