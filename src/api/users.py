@@ -130,14 +130,10 @@ def update_user() -> Response:
     responses:
         201:
             description: Successfully update user data
-        400:
-            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -224,8 +220,6 @@ def delete_user(uid: str) -> Response:
     responses:
         200:
             description: User deleted
-        400:
-            description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
@@ -286,8 +280,6 @@ def get_user() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -369,8 +361,6 @@ def get_users() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -458,10 +448,6 @@ def get_subordinate() -> Response:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
-        404:
-            description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -490,7 +476,7 @@ def get_subordinate() -> Response:
         org: list = json.loads(org_file).get("org")
         subordinates: list = find_subordinates_by_dod(org, dod)
     else:
-        return BadRequest("At least on paramater required")
+        return BadRequest("At least one paramater required")
 
     return jsonify(subordinates), 200
 
