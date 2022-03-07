@@ -8,9 +8,7 @@
         get_all_events()
         get_event()
         get_recent_events()
-        get_next_event_page()
         register_event()
-        update_event()
         change_status()
 """
 from firebase_admin import auth, firestore
