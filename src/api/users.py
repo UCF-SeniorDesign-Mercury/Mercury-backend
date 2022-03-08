@@ -41,7 +41,7 @@ def register_user() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/UserRegister'
+                    $ref: '#/components/schemas/RegisterUser'
     responses:
         201:
             description: User registered
@@ -67,6 +67,7 @@ def register_user() -> Response:
 
     # save data to firestore batabase
     entry: dict = dict()
+    entry["uid"] = uid
     entry["name"] = user_data.get("name")
     entry["email"] = decoded_token.get("email")
     entry["user_status"] = 1
@@ -126,7 +127,7 @@ def update_user() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/UserUpdate'
+                    $ref: '#/components/schemas/UpdateUser'
     responses:
         201:
             description: Successfully update user data
@@ -408,7 +409,9 @@ def get_users() -> Response:
 
     users: list = []
     for user in user_docs:
-        users.append(user.to_dict())
+        temp: dict = user.to_dict()
+        temp["uid"] = None
+        users.append(temp)
 
     return jsonify(users), 200
 
@@ -428,11 +431,6 @@ def get_subordinate() -> Response:
           schema:
             type: string
           required: true
-        - in: query
-          name: name
-          schema:
-            type: string
-          required: false
         - in: query
           name: dod
           schema:
@@ -455,18 +453,8 @@ def get_subordinate() -> Response:
     dod: str = request.args.get("dod", type=str)
     bucket = storage.bucket()
     org_json_path: str = "org/org.json"
-    if "name" in request.args:
-        blob = bucket.blob(org_json_path)
-        if not blob.exists():
-            return NotFound("The org chart file not found")
 
-        # download the signature image
-        org_file: str = blob.download_as_bytes().decode("utf-8")
-        org: list = json.loads(org_file).get("org")
-        subordinates: list = find_subordinates_by_name(org, name)
-        return jsonify(subordinates), 200
-
-    elif "dod" in request.args:
+    if "dod" in request.args:
         blob = bucket.blob(org_json_path)
         if not blob.exists():
             return NotFound("The org chart file not found")
@@ -479,16 +467,6 @@ def get_subordinate() -> Response:
         return BadRequest("At least one paramater required")
 
     return jsonify(subordinates), 200
-
-
-def find_subordinates_by_name(org: list, name: str) -> list:
-    for people in org:
-        if people.get("name") == name:
-            return people.get("sub")
-        elif people.get("sub") != None:
-            return find_subordinates_by_name(people.get("sub"), name)
-        else:
-            continue
 
 
 def find_subordinates_by_dod(org: list, dod: str) -> list:
