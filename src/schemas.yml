@@ -275,7 +275,7 @@ UpdateFile:
       required: false
       description: The user signature
 
-FileStatus:
+ReviewFile:
   type: object
   properties:
     file_id:
@@ -288,13 +288,18 @@ FileStatus:
       required: true
       decription: Require resubmit = 3, Approved = 4, Rejected = 5
       example: 3
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
     comment:
       type: string
       required: false
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
 
-FileRecommend:
+RecommendFile:
   type: object
   properties:
     file_id:
@@ -306,6 +311,16 @@ FileRecommend:
       type: boolean
       required: true
       decription: recommend = true, non recommend = false
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
+    comment:
+      type: string
+      required: false
+      decription: this is the place the reviewer or admin could leave a commet for the author
+      example: the date is wrong need resubmit it again.
 
 # --------------------------------- User ------------------------------- #
 UserRegister:

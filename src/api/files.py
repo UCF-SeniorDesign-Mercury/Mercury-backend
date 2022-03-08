@@ -397,13 +397,10 @@ def update_file():
     bucket = storage.bucket()
     file_path: str = "file/" + data.get("file_id")
     if "file" in data:
-        try:
-            blob = bucket.blob(file_path)
-            blob.upload_from_string(
-                data.get("file"), content_type="application/pdf"
-            )
-        except:
-            return InternalServerError("cannot update pdf to storage")
+        blob = bucket.blob(file_path)
+        blob.upload_from_string(
+            data.get("file"), content_type="application/pdf"
+        )
 
     # save pdf to firestore storage
     if "signature" in data:
@@ -422,15 +419,15 @@ def update_file():
     return Response("File Updated", 200)
 
 
-@files.put("/change_status")
+@files.put("/review_file")
 @check_token
-def change_status():
+def review_file():
     """
-    Change the status of a file case from Firebase Storage.
+    Review the file from Firebase Storage.
     ---
     tags:
         - files
-    summary: Change the status
+    summary: Review the file
     parameters:
         - in: header
           name: Authorization
@@ -441,7 +438,7 @@ def change_status():
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/FileStatus'
+                    $ref: '#/components/schemas/ReviewFile'
     responses:
         200:
             description: Status changed
@@ -457,9 +454,9 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token.get("uid")
+    reviewer_uid: str = decoded_token.get("uid")
     # get the user table
-    reviewer_ref = db.collection("User").document(uid).get()
+    reviewer_ref = db.collection("User").document(reviewer_uid).get()
     if reviewer_ref.exists == False:
         return NotFound("The user was not found")
     reviewer: dict = reviewer_ref.to_dict()
@@ -489,12 +486,18 @@ def change_status():
 
     file_ref.update({"status": data.get("decision")})
 
+    # update the file in the storage
+    bucket = storage.bucket()
+    file_path: str = "file/" + data.get("file_id")
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(data.get("file"), content_type="application/pdf")
+
     # notified user the decision
     if data.get("decision") == 3:
         create_notification(
             notification_type="resubmit file",
             file_type=file.get("filetype"),
-            sender=uid,
+            sender=reviewer_uid,
             receiver_uid=file.get("author"),
             receiver_name=None,
         )
@@ -502,7 +505,7 @@ def change_status():
         create_notification(
             notification_type="file approved",
             file_type=file.get("filetype"),
-            sender=uid,
+            sender=reviewer_uid,
             receiver_uid=file.get("author"),
             receiver_name=None,
         )
@@ -510,7 +513,7 @@ def change_status():
         create_notification(
             notification_type="file rejected",
             file_type=file.get("filetype"),
-            sender=uid,
+            sender=reviewer_uid,
             receiver_uid=file.get("author"),
             receiver_name=None,
         )
@@ -621,9 +624,9 @@ def get_user_files() -> Response:
     return jsonify(files), 200
 
 
-@files.get("/review_user_files")
+@files.get("/get_review_files")
 @check_token
-def review_user_files() -> Response:
+def get_review_files() -> Response:
     """
     Get 10 unreviewed user files from Firebase.
     ---
@@ -850,7 +853,7 @@ def give_recommendation():
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/FileRecommend'
+                    $ref: '#/components/schemas/RecommendFile'
     responses:
         200:
             description: "Recommendation is posted"
@@ -880,15 +883,28 @@ def give_recommendation():
         return NotFound("The file not found")
     file: dict = file_ref.get().to_dict()
 
-    # Only the reviewer, and admin have access to change the status of the file
+    # Only the recommender have access to give recommendation of the file
     if recommender.get("name") != file.get("recommender"):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
+    if "comment" in data:
+        file_ref.update({"comment": data.get("comment")})
+
     file_ref.update(
-        {"is_recommend": data.get("is_recommend"), "reviewer_visible": True}
+        {
+            "is_recommend": data.get("is_recommend"),
+            "reviewer_visible": True,
+            "status": 2,
+        }
     )
+
+    # update the file from storage
+    bucket = storage.bucket()
+    file_path: str = "file/" + data.get("file_id")
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(data.get("file"), content_type="application/pdf")
 
     # notified the user the decision
     if data.get("is_recommend"):
