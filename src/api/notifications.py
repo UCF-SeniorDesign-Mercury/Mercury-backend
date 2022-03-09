@@ -25,7 +25,7 @@ def create_notification(
     notification_type: str,
     file_type: str,
     sender: str,
-    receiver_name: str,
+    receiver_dod: str,
     receiver_uid: str,
 ):
 
@@ -43,7 +43,7 @@ def create_notification(
         # get to_user uid.
         receiver_docs = (
             db.collection("User")
-            .where("name", "==", receiver_name)
+            .where("dod", "==", receiver_dod)
             .limit(1)
             .stream()
         )
@@ -53,9 +53,7 @@ def create_notification(
         receiver: dict = dict
         for doc in receiver_docs:
             receiver = doc.to_dict()
-        email: str = receiver.get("email")
-        user: UserRecord = auth.get_user_by_email(email)
-        entry["receiver"] = user.uid
+        entry["receiver"] = receiver.get("uid")
 
     db.collection("Notification").document(entry.get("notification_id")).set(
         entry
