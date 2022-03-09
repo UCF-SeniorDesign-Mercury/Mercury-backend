@@ -320,6 +320,9 @@ def get_user() -> Response:
         profile_picture = blob.download_as_bytes()
         user["profile_picture"] = profile_picture.decode("utf-8")
 
+    # remove the uid from data
+    user["uid"] = None
+
     return jsonify(user), 200
 
 
