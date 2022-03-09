@@ -120,7 +120,7 @@ def upload_file() -> Response:
             notification_type="recommend file",
             file_type=data.get("filetype"),
             sender=uid,
-            receiver_name=data.get("recommender"),
+            receiver_dod=data.get("recommender"),
             receiver_uid=None,
         )
     else:
@@ -129,7 +129,7 @@ def upload_file() -> Response:
             notification_type="review file",
             file_type=data.get("filetype"),
             sender=uid,
-            receiver_name=data.get("reviewer"),
+            receiver_dod=data.get("reviewer"),
             receiver_uid=None,
         )
 
@@ -220,9 +220,9 @@ def get_file(file_id: str) -> Response:
 
     # Only the author, reviewer, and admin have access to the data
     if (
-        user.get("name") != res.get("reviewer")
+        user.get("dod") != res.get("reviewer")
         and uid != res.get("author")
-        and user.get("name") != res.get("recommender")
+        and user.get("dod") != res.get("recommender")
         and decoded_token.get("admin") != True
     ):
         return Unauthorized(
@@ -383,7 +383,7 @@ def update_file():
             file_type=data.get("filetype"),
             sender=uid,
             receiver_uid=None,
-            receiver_name=data.get("recommender"),
+            receiver_dod=data.get("recommender"),
         )
 
     # if "reviewer" in data:
@@ -474,7 +474,7 @@ def review_file():
 
     # Only the reviewer, and admin have access to change the status of the file
     if (
-        reviewer.get("name") != file.get("reviewer")
+        reviewer.get("dod") != file.get("reviewer")
         and decoded_token.get("admin") != True
     ):
         return Unauthorized(
@@ -499,7 +499,7 @@ def review_file():
             file_type=file.get("filetype"),
             sender=reviewer_uid,
             receiver_uid=file.get("author"),
-            receiver_name=None,
+            receiver_dod=None,
         )
     elif data.get("decision") == 4:
         create_notification(
@@ -507,7 +507,7 @@ def review_file():
             file_type=file.get("filetype"),
             sender=reviewer_uid,
             receiver_uid=file.get("author"),
-            receiver_name=None,
+            receiver_dod=None,
         )
     elif data.get("decision") == 5:
         create_notification(
@@ -515,7 +515,7 @@ def review_file():
             file_type=file.get("filetype"),
             sender=reviewer_uid,
             receiver_uid=file.get("author"),
-            receiver_name=None,
+            receiver_dod=None,
         )
 
     return Response("Status changed", 200)
@@ -727,7 +727,7 @@ def get_review_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("filetype", "==", filetype)
                 .where("reviewer_visible", "==", True)
@@ -738,7 +738,7 @@ def get_review_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
@@ -748,7 +748,7 @@ def get_review_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("filetype", "==", filetype)
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
@@ -758,7 +758,7 @@ def get_review_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
@@ -822,7 +822,7 @@ def get_recommend_files() -> Response:
     file_docs = (
         db.collection("Files")
         .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .where("recommender", "==", user.get("name"))
+        .where("recommender", "==", user.get("dod"))
         .where("status", "in", [1, 2, 3])
         .limit(page_limit)
         .stream()
@@ -884,7 +884,7 @@ def give_recommendation():
     file: dict = file_ref.get().to_dict()
 
     # Only the recommender have access to give recommendation of the file
-    if recommender.get("name") != file.get("recommender"):
+    if recommender.get("dod") != file.get("recommender"):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
@@ -913,7 +913,7 @@ def give_recommendation():
             file_type=file.get("filetype"),
             sender=uid,
             receiver_uid=file.get("author"),
-            receiver_name=None,
+            receiver_dod=None,
         )
     else:
         create_notification(
@@ -921,14 +921,14 @@ def give_recommendation():
             file_type=file.get("filetype"),
             sender=uid,
             receiver_uid=file.get("author"),
-            receiver_name=None,
+            receiver_dod=None,
         )
     # notified the reviewer to review this file
     create_notification(
         notification_type="review file",
         file_type=file.get("filetype"),
         sender=uid,
-        receiver_name=file.get("reviewer"),
+        receiver_dod=file.get("reviewer"),
         receiver_uid=None,
     )
     return Response("Recommend post", 200)
