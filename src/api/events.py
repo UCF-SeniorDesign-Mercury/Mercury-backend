@@ -329,7 +329,7 @@ def confirm_event(event_id: str) -> Response:
     Confirm the event invitation.
     ---
     tags:
-        - files
+        - event
     summary: Confirm event
     parameters:
         - in: header
