@@ -27,6 +27,9 @@ CreateEvent:
       type: string
       required: true
       example: The organizer name
+    invitees_dod:
+      type: array
+      required: true
     description:
       type: string
       required: true
@@ -67,6 +70,12 @@ UpdateEvent:
       example: mandatory
       required: false
       description: mandatory, optional, or personal
+    add_invitees:
+      type: array
+      required: false
+    remove_invitees:
+      type: array
+      required: false
 
 Event:
   type: object
@@ -106,6 +115,12 @@ Event:
       type: string
       required: true
       example: The organier name
+    assigner_dod:
+      type: array
+      required: true
+    confirmed_dod:
+      type: array
+      required: true
     description:
       type: string
       required: true
@@ -323,7 +338,7 @@ RecommendFile:
       example: the date is wrong need resubmit it again.
 
 # --------------------------------- User ------------------------------- #
-UserRegister:
+RegisterUser:
   type: object
   properties:
     name:
@@ -404,7 +419,7 @@ User:
       type: string
       required: false
 
-UserUpdate:
+UpdateUser:
   type: object
   properties:
     grade:
