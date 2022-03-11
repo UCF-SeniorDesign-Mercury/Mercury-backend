@@ -30,6 +30,8 @@ CreateEvent:
     invitees_dod:
       type: array
       required: true
+      items:
+        type: string
     description:
       type: string
       required: true
@@ -73,9 +75,13 @@ UpdateEvent:
     add_invitees:
       type: array
       required: false
+      items:
+        type: string
     remove_invitees:
       type: array
       required: false
+      items:
+        type: string
 
 Event:
   type: object
