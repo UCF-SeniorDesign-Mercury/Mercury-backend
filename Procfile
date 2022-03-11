@@ -1,1 +1,1 @@
-web: poetry run python -m src run
+web: python -m src run
