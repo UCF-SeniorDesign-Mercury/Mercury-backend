@@ -89,8 +89,11 @@ def create_event() -> Response:
     db.collection("Scheduled-Events").document(entry.get("event_id")).set(entry)
 
     # notify users
-    for dod in data.get("invitees_dod"):
-        create_notification("create event", None, uid, dod, None)
+    try:
+        for dod in data.get("invitees_dod"):
+            create_notification("create event", None, uid, dod, None)
+    except:
+        return NotFound("The invitee was not found")
 
     # return Response 201 for successfully creating a new resource
     return Response(response="Event added", status=201)
