@@ -121,12 +121,16 @@ Event:
       type: string
       required: true
       example: The organier name
-    assigner_dod:
+    invitees_dod:
       type: array
       required: true
+      items:
+        type: string
     confirmed_dod:
       type: array
       required: true
+      items:
+        type: string
     description:
       type: string
       required: true
