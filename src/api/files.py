@@ -101,9 +101,6 @@ def upload_file() -> Response:
     if "reviewer" not in data or data.get("reviewer").isspace():
         return BadRequest("Missing the reviewer")
 
-    if "recommender" not in data or data.get("recommender").isspace():
-        return BadRequest("Missing the recommender")
-
     if "filename" not in data or data.get("filename").isspace():
         return BadRequest("Missing the filename")
 
@@ -119,6 +116,8 @@ def upload_file() -> Response:
     entry["comment"] = ""
     entry["reviewer_visible"] = True
     if "recommender" in data and data.get("filetype") == "rst_request":
+        if data.get("recommender").isspace():
+            return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
         entry["reviewer_visible"] = False
         # notification send to recommender
