@@ -893,7 +893,7 @@ def give_recommendation():
     if "file" not in data or not data.get("file").strip():
         return BadRequest("Missing the file")
 
-    if "is_recommend" not in data:
+    if "is_recommended" not in data:
         return BadRequest("Missing the recommendation result")
 
     # get the user table
@@ -919,7 +919,7 @@ def give_recommendation():
 
     file_ref.update(
         {
-            "is_recommend": data.get("is_recommend"),
+            "is_recommended": data.get("is_recommended"),
             "reviewer_visible": True,
             "status": 2,
         }
@@ -932,7 +932,7 @@ def give_recommendation():
     blob.upload_from_string(data.get("file"), content_type="application/pdf")
 
     # notified the user the decision
-    if data.get("is_recommend"):
+    if data.get("is_recommended"):
         create_notification(
             notification_type="positive recommendation",
             file_type=file.get("filetype"),

@@ -332,7 +332,7 @@ RecommendFile:
       required: true
       description: this is the file id
       example: 623b6109-dc7b-4e1a-8562-f93160c743b1
-    is_recommend:
+    is_recommended:
       type: boolean
       required: true
       decription: recommend = true, non recommend = false
