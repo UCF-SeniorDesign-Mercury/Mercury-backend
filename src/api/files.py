@@ -98,8 +98,14 @@ def upload_file() -> Response:
     if user.get("signature") == None and data.get("signature") == None:
         return BadRequest("Missing the signature")
 
-    if "reviewer" not in data:
+    if "reviewer" not in data or data.get("reviewer").isspace():
         return BadRequest("Missing the reviewer")
+
+    if "recommender" not in data or data.get("recommender").isspace():
+        return BadRequest("Missing the recommender")
+
+    if "filename" not in data or data.get("filename").isspace():
+        return BadRequest("Missing the filename")
 
     # save data to firestore batabase
     entry: dict = dict()
@@ -144,7 +150,9 @@ def upload_file() -> Response:
         return InternalServerError("Could not save pdf")
 
     # update signature
-    if data.get("signature") != None:
+    if "signature" in data:
+        if "signature" in user:
+            signature_path = user.get("signature")
         try:
             # save signature image to firebase storage
             blob = bucket.blob(signature_path)
@@ -284,10 +292,10 @@ def delete_file(file_id: str) -> Response:
     file_path: str = "file/" + file_id
 
     # get file data from firestore
-    data_ref = db.collection("Files").document(file_id)
-    if not data_ref.get().exists:
+    file_ref = db.collection("Files").document(file_id)
+    if not file_ref.get().exists:
         return NotFound("The file was not found")
-    data: dict = data_ref.get().to_dict()
+    data: dict = file_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
     if (
@@ -307,7 +315,7 @@ def delete_file(file_id: str) -> Response:
     blob.delete()
 
     # delete the data from firesotre
-    data_ref.delete()
+    file_ref.delete()
 
     return Response(response="File deleted", status=200)
 
@@ -386,10 +394,6 @@ def update_file():
             receiver_dod=data.get("recommender"),
         )
 
-    # if "reviewer" in data:
-    #     file_ref.update({"reviewer": data.get("reviewer")})
-    #     # notification send to reviewer
-
     if "filename" in data:
         file_ref.update({"filename": data.get("filename")})
 
@@ -455,16 +459,27 @@ def review_file():
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     reviewer_uid: str = decoded_token.get("uid")
+    data: dict = request.get_json()
+
+    # exceptions
+    if (
+        "decision" not in data
+        or data.get("decision") < 3
+        or data.get("decision") > 5
+    ):
+        return BadRequest("Unsupported decision type")
+
+    if "file_id" not in data or data.get("file_id").isspace():
+        return BadRequest("Missing the file id")
+
+    if "file" not in data or data.get("file").isspace():
+        return BadRequest("Missing the file")
+
     # get the user table
     reviewer_ref = db.collection("User").document(reviewer_uid).get()
     if reviewer_ref.exists == False:
         return NotFound("The user was not found")
     reviewer: dict = reviewer_ref.to_dict()
-    data: dict = request.get_json()
-
-    # exceptions
-    if data.get("decision") < 3 or data.get("decision") > 5:
-        return BadRequest("Unsupported decision type.")
 
     # fetch the file data from firestore
     file_ref = db.collection("Files").document(data.get("file_id"))
@@ -870,6 +885,17 @@ def give_recommendation():
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+
+    # exceptions
+    if "file_id" not in data or data.get("file_id").isspace():
+        return BadRequest("Missing the file id")
+
+    if "file" not in data or data.get("file").isspace():
+        return BadRequest("Missing the file")
+
+    if "is_recommend" not in data:
+        return BadRequest("Missing the recommendation result")
+
     # get the user table
     recommender_ref = db.collection("User").document(uid).get()
     if recommender_ref.exists == False:
