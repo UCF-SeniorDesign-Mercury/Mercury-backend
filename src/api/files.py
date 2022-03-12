@@ -82,7 +82,7 @@ def upload_file() -> Response:
     user: dict = user_ref.get().to_dict()
 
     # Exceptions
-    if "file" not in data or data.get("file").isspace():
+    if "file" not in data or not data.get("file").strip():
         return BadRequest("There was no file provided")
     else:
         file = data.get("file")
@@ -98,10 +98,10 @@ def upload_file() -> Response:
     if user.get("signature") == None and data.get("signature") == None:
         return BadRequest("Missing the signature")
 
-    if "reviewer" not in data or data.get("reviewer").isspace():
+    if "reviewer" not in data or not data.get("reviewer").strip():
         return BadRequest("Missing the reviewer")
 
-    if "filename" not in data or data.get("filename").isspace():
+    if "filename" not in data or not data.get("filename").strip():
         return BadRequest("Missing the filename")
 
     # save data to firestore batabase
@@ -116,7 +116,7 @@ def upload_file() -> Response:
     entry["comment"] = ""
     entry["reviewer_visible"] = True
     if "recommender" in data and data.get("filetype") == "rst_request":
-        if data.get("recommender").isspace():
+        if not data.get("recommender").strip():
             return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
         entry["reviewer_visible"] = False
@@ -468,10 +468,10 @@ def review_file():
     ):
         return BadRequest("Unsupported decision type")
 
-    if "file_id" not in data or data.get("file_id").isspace():
+    if "file_id" not in data or not data.get("file_id").strip():
         return BadRequest("Missing the file id")
 
-    if "file" not in data or data.get("file").isspace():
+    if "file" not in data or not data.get("file").strip():
         return BadRequest("Missing the file")
 
     # get the user table
@@ -887,10 +887,10 @@ def give_recommendation():
     data: dict = request.get_json()
 
     # exceptions
-    if "file_id" not in data or data.get("file_id").isspace():
+    if "file_id" not in data or not data.get("file_id").strip():
         return BadRequest("Missing the file id")
 
-    if "file" not in data or data.get("file").isspace():
+    if "file" not in data or not data.get("file").strip():
         return BadRequest("Missing the file")
 
     if "is_recommend" not in data:

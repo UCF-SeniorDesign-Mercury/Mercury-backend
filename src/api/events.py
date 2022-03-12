@@ -71,21 +71,21 @@ def create_event() -> Response:
     data: dict = request.get_json()
 
     # Exceptions
-    if "title" not in data or data.get("title").isspace():
+    if "title" not in data or not data.get("title").strip():
         return BadRequest("Missing the title")
-    if "starttime" not in data or data.get("starttime").isspace():
+    if "starttime" not in data or not data.get("starttime").strip():
         return BadRequest("Missing the starttime")
-    if "endtime" not in data or data.get("endtime").isspace():
+    if "endtime" not in data or not data.get("endtime").strip():
         return BadRequest("Missing the endtime")
-    if "type" not in data or data.get("type").isspace():
+    if "type" not in data or not data.get("type").strip():
         return BadRequest("Missing the type")
     if "period" not in data or not isinstance(data.get("period"), bool):
         return BadRequest("Missing the period")
     if "invitees_dod" not in data or isinstance(data.get("invitees_dod"), list):
         return BadRequest("Missing the invitees_dod")
-    if "organizer" not in data or data.get("organizer").isspace():
+    if "organizer" not in data or not data.get("organizer").strip():
         return BadRequest("Missing the organizer")
-    if "description" not in data or data.get("description").isspace():
+    if "description" not in data or not data.get("description").strip():
         return BadRequest("Missing the description")
 
     entry: dict = dict()
@@ -254,15 +254,15 @@ def update_event() -> Response:
         except:
             return BadRequest("The endtime formate should be datetime type")
 
-    if "period" in data and not data.get("period").isspace():
+    if "period" in data and data.get("period").strip():
         event_ref.update({"period": data.get("period")})
-    if "type" in data and not data.get("type").isspace():
+    if "type" in data and data.get("type").strip():
         event_ref.update({"type": data.get("type")})
-    if "title" in data and not data.get("title").isspace():
+    if "title" in data and data.get("title").strip():
         event_ref.update({"title": data.get("title")})
-    if "description" in data and not data.get("description").isspace():
+    if "description" in data and data.get("description").strip():
         event_ref.update({"description": data.get("description")})
-    if "organizer" in data and not data.get("organizer").isspace():
+    if "organizer" in data and data.get("organizer").strip():
         event_ref.update({"organizer": data.get("organizer")})
 
     if "add_invitees" in data and data.get("add_invitees"):
