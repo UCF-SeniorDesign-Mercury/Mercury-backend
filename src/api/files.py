@@ -885,6 +885,7 @@ def give_recommendation():
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    data: dict = request.get_json()
 
     # exceptions
     if "file_id" not in data or data.get("file_id").isspace():
@@ -901,7 +902,6 @@ def give_recommendation():
     if recommender_ref.exists == False:
         return NotFound("The user was not found")
     recommender: dict = recommender_ref.to_dict()
-    data: dict = request.get_json()
 
     # fetch the file data from firestore
     file_ref = db.collection("Files").document(data.get("file_id"))
