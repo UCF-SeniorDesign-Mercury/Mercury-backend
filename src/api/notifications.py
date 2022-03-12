@@ -28,7 +28,6 @@ def create_notification(
     receiver_dod: str,
     receiver_uid: str,
 ):
-
     entry: dict = dict()
     entry["notification_type"] = notification_type
     entry["sender"] = sender
@@ -49,7 +48,7 @@ def create_notification(
         )
 
         if receiver_docs == None:
-            raise NotFound("The receiver was not found")
+            return NotFound("The receiver was not found")
         receiver: dict = dict
         for doc in receiver_docs:
             receiver = doc.to_dict()

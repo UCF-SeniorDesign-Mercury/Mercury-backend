@@ -82,10 +82,10 @@ def upload_file() -> Response:
     user: dict = user_ref.get().to_dict()
 
     # Exceptions
-    if "file" in data:
-        file = data.get("file")
-    else:
+    if "file" not in data or data.get("file").isspace():
         return BadRequest("There was no file provided")
+    else:
+        file = data.get("file")
 
     if (
         data.get("filetype") != "rst_request"

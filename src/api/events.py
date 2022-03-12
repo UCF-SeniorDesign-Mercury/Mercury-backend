@@ -11,13 +11,13 @@
         register_event()
         change_status()
 """
+from datetime import datetime
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
-from src.api import notifications
 from src.api.notifications import create_notification
 from src.common.database import db
 from src.common.decorators import admin_only, check_token
@@ -70,14 +70,39 @@ def create_event() -> Response:
     # add more initial information
     data: dict = request.get_json()
 
-    entry: dict = dict()
+    # Exceptions
+    if "title" not in data or data.get("title").isspace():
+        return BadRequest("Missing the title")
+    if "starttime" not in data or data.get("starttime").isspace():
+        return BadRequest("Missing the starttime")
+    if "endtime" not in data or data.get("endtime").isspace():
+        return BadRequest("Missing the endtime")
+    if "type" not in data or data.get("type").isspace():
+        return BadRequest("Missing the type")
+    if "period" not in data or not isinstance(data.get("period"), bool):
+        return BadRequest("Missing the period")
+    if "invitees_dod" not in data or isinstance(data.get("invitees_dod"), list):
+        return BadRequest("Missing the invitees_dod")
+    if "organizer" not in data or data.get("organizer").isspace():
+        return BadRequest("Missing the organizer")
+    if "description" not in data or data.get("description").isspace():
+        return BadRequest("Missing the description")
 
+    entry: dict = dict()
+    try:
+        entry["starttime"] = datetime.fromisoformat(data.get("starttime"))
+    except:
+        return BadRequest("The starttime formate should be datetime type")
+    try:
+        entry["endtime"] = datetime.fromisoformat(data.get("endtime"))
+    except:
+        return BadRequest("The endtime formate should be datetime type")
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["title"] = data.get("title")
-    entry["starttime"] = data.get("starttime")
-    entry["endtime"] = data.get("endtime")
+    # entry["starttime"] = data.get("starttime")
+    # entry["endtime"] = data.get("endtime")
     entry["type"] = data.get("type")
     entry["period"] = data.get("period")
     entry["invitees_dod"] = data.get("invitees_dod")
@@ -207,31 +232,45 @@ def update_event() -> Response:
         return NotFound("The event was not found")
 
     # Only the event organizer and admin could update the event
-    if event.get("author") != uid or decoded_token.get("admin") == True:
+    if event.get("author") != uid and decoded_token.get("admin") != True:
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
     # update event by given paramter
     if "starttime" in data:
-        event_ref.update({"starttime": data.get("starttime")})
+        try:
+            event_ref.update(
+                {"starttime": datetime.fromisoformat(data.get("starttime"))}
+            )
+        except:
+            return BadRequest("The starttime formate should be datetime type")
+
     if "endtime" in data:
-        event_ref.update({"endtime": data.get("endtime")})
-    if "period" in data:
+        try:
+            event_ref.update(
+                {"endtime": datetime.fromisoformat(data.get("endtime"))}
+            )
+        except:
+            return BadRequest("The endtime formate should be datetime type")
+
+    if "period" in data and not data.get("period").isspace():
         event_ref.update({"period": data.get("period")})
-    if "type" in data:
+    if "type" in data and not data.get("type").isspace():
         event_ref.update({"type": data.get("type")})
-    if "title" in data:
+    if "title" in data and not data.get("title").isspace():
         event_ref.update({"title": data.get("title")})
-    if "description" in data:
+    if "description" in data and not data.get("description").isspace():
         event_ref.update({"description": data.get("description")})
-    if "organizer" in data:
+    if "organizer" in data and not data.get("organizer").isspace():
         event_ref.update({"organizer": data.get("organizer")})
-    if "add_invitees" in data:
+
+    if "add_invitees" in data and data.get("add_invitees"):
         event_ref.update(
             {"invitees_dod": firestore.ArrayUnion(data.get("add_invitees"))}
         )
-    if "remove_invitees" in data:
+
+    if "remove_invitees" in data and data.get("remove_invitees"):
         event_ref.update(
             {"invitees_dod": firestore.ArrayRemove(data.get("remove_invitees"))}
         )
@@ -299,7 +338,7 @@ def get_events() -> Response:
 
     page_limit: int = request.args.get("page_limit", type=int, default=10)
 
-    if "type" in request.args.get():
+    if "type" in request.args:
         type: str = request.args.get("type", type=str)
         docs: list = (
             db.collection("Scheduled-Events")
