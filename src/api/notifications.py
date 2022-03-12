@@ -47,12 +47,14 @@ def create_notification(
             .stream()
         )
 
-        if receiver_docs == None:
-            return NotFound("The receiver was not found")
-        receiver: dict = dict
+        receiver_list: list = []
         for doc in receiver_docs:
-            receiver = doc.to_dict()
-        entry["receiver"] = receiver.get("uid")
+            receiver_list.append(doc.to_dict())
+
+        if not receiver_list:
+            raise NotFound("The reviewer ", receiver_dod, " was not found")
+
+        entry["receiver"] = receiver_list[0].get("uid")
 
     db.collection("Notification").document(entry.get("notification_id")).set(
         entry

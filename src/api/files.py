@@ -121,22 +121,28 @@ def upload_file() -> Response:
         entry["recommender"] = data.get("recommender")
         entry["reviewer_visible"] = False
         # notification send to recommender
-        create_notification(
-            notification_type="recommend file",
-            file_type=data.get("filetype"),
-            sender=uid,
-            receiver_dod=data.get("recommender"),
-            receiver_uid=None,
-        )
+        try:
+            create_notification(
+                notification_type="recommend file",
+                file_type=data.get("filetype"),
+                sender=uid,
+                receiver_dod=data.get("recommender"),
+                receiver_uid=None,
+            )
+        except:
+            return NotFound("The recommender was not found")
     else:
         # notification send to reviewer
-        create_notification(
-            notification_type="review file",
-            file_type=data.get("filetype"),
-            sender=uid,
-            receiver_dod=data.get("reviewer"),
-            receiver_uid=None,
-        )
+        try:
+            create_notification(
+                notification_type="review file",
+                file_type=data.get("filetype"),
+                sender=uid,
+                receiver_dod=data.get("reviewer"),
+                receiver_uid=None,
+            )
+        except:
+            return NotFound("The reviewer was not found")
 
     db.collection("Files").document(file_id).set(entry)
 
@@ -384,14 +390,17 @@ def update_file():
 
     if "recommender" in data:
         file_ref.update({"recommender": data.get("recommender")})
-        # notification send to recommender
-        create_notification(
-            notification_type="recommend " + " file",
-            file_type=data.get("filetype"),
-            sender=uid,
-            receiver_uid=None,
-            receiver_dod=data.get("recommender"),
-        )
+        try:
+            # notification send to recommender
+            create_notification(
+                notification_type="recommend " + " file",
+                file_type=data.get("filetype"),
+                sender=uid,
+                receiver_uid=None,
+                receiver_dod=data.get("recommender"),
+            )
+        except:
+            return NotFound("The recommender was not found")
 
     if "filename" in data:
         file_ref.update({"filename": data.get("filename")})
@@ -507,30 +516,33 @@ def review_file():
     blob.upload_from_string(data.get("file"), content_type="application/pdf")
 
     # notified user the decision
-    if data.get("decision") == 3:
-        create_notification(
-            notification_type="resubmit file",
-            file_type=file.get("filetype"),
-            sender=reviewer_uid,
-            receiver_uid=file.get("author"),
-            receiver_dod=None,
-        )
-    elif data.get("decision") == 4:
-        create_notification(
-            notification_type="file approved",
-            file_type=file.get("filetype"),
-            sender=reviewer_uid,
-            receiver_uid=file.get("author"),
-            receiver_dod=None,
-        )
-    elif data.get("decision") == 5:
-        create_notification(
-            notification_type="file rejected",
-            file_type=file.get("filetype"),
-            sender=reviewer_uid,
-            receiver_uid=file.get("author"),
-            receiver_dod=None,
-        )
+    try:
+        if data.get("decision") == 3:
+            create_notification(
+                notification_type="resubmit file",
+                file_type=file.get("filetype"),
+                sender=reviewer_uid,
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        elif data.get("decision") == 4:
+            create_notification(
+                notification_type="file approved",
+                file_type=file.get("filetype"),
+                sender=reviewer_uid,
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        elif data.get("decision") == 5:
+            create_notification(
+                notification_type="file rejected",
+                file_type=file.get("filetype"),
+                sender=reviewer_uid,
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+    except:
+        return NotFound("The author was not found")
 
     return Response("Status changed", 200)
 
@@ -932,28 +944,32 @@ def give_recommendation():
     blob.upload_from_string(data.get("file"), content_type="application/pdf")
 
     # notified the user the decision
-    if data.get("is_recommended"):
+    try:
+        if data.get("is_recommended"):
+            create_notification(
+                notification_type="positive recommendation",
+                file_type=file.get("filetype"),
+                sender=uid,
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        else:
+            create_notification(
+                notification_type="negative recommendation",
+                file_type=file.get("filetype"),
+                sender=uid,
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        # notified the reviewer to review this file
         create_notification(
-            notification_type="positive recommendation",
+            notification_type="review file",
             file_type=file.get("filetype"),
             sender=uid,
-            receiver_uid=file.get("author"),
-            receiver_dod=None,
+            receiver_dod=file.get("reviewer"),
+            receiver_uid=None,
         )
-    else:
-        create_notification(
-            notification_type="negative recommendation",
-            file_type=file.get("filetype"),
-            sender=uid,
-            receiver_uid=file.get("author"),
-            receiver_dod=None,
-        )
-    # notified the reviewer to review this file
-    create_notification(
-        notification_type="review file",
-        file_type=file.get("filetype"),
-        sender=uid,
-        receiver_dod=file.get("reviewer"),
-        receiver_uid=None,
-    )
+    except:
+        return NotFound("The reviewer was not found")
+
     return Response("Recommend post", 200)
