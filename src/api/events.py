@@ -85,8 +85,6 @@ def create_event() -> Response:
         return BadRequest("Missing the invitees_dod")
     if "organizer" not in data or not data.get("organizer").strip():
         return BadRequest("Missing the organizer")
-    if "description" not in data or not data.get("description").strip():
-        return BadRequest("Missing the description")
 
     entry: dict = dict()
     try:
