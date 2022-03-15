@@ -1,6 +1,10 @@
 [tool.poetry]
 name = "mercury-backend"
 version = "0.1.0"
+readme = "README.md"
+repository = "https://github.com/UCF-SeniorDesign-Mercury/Mercury-backend"
+include = ["src/**/*"]
+packages = [{ include = "src" }]
 description = "The backend part of the Mercury project"
 authors = ["Dmitrii Golubenko <d.golubenko@knights.ucf.edu>"]
 
@@ -68,6 +72,9 @@ virtualenv = "20.10.0"
 virtualenv-clone = "0.5.7"
 Werkzeug = "1.0.1"
 zipp = "3.6.0"
+
+[tool.poetry.scripts]
+backend = "src.__main__:main"
 
 [tool.poetry.dev-dependencies]
 mock-firestore = "0.10.0"
