@@ -51,8 +51,8 @@ jobs:
           if [ -f pyproject.toml ]; then poetry install; fi
     - name: Test the app
       run: |
-        coverage run --source=src -m src test
-        coverage xml
+        poetry run coverage run --source=src -m src test
+        poetry run coverage xml
     - name: Comment Test Report
       uses: mikepenz/action-junit-report@v2
       with:
