@@ -32,3 +32,33 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8.12
+    - name: Install dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f pyproject.toml ]; then poetry install; fi
+    - name: Test the app
+      run: |
+        coverage run --source=src -m src test
+        coverage xml
+    - name: Comment Test Report
+      uses: mikepenz/action-junit-report@v2
+      with:
+        report_paths: '**/junit/test-results.xml'
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Comment Coverage
+      uses: 5monkeys/cobertura-action@master
+      with:
+        path: coverage.xml
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        minimum_coverage: 0

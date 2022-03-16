@@ -6,6 +6,7 @@
 from firebase_admin import credentials, firestore, initialize_app, storage
 import os
 from dotenv import load_dotenv
+from mockfirestore import MockFirestore
 
 load_dotenv()
 
@@ -28,4 +29,8 @@ cred = credentials.Certificate(FIREBASE_KEYS)
 firebase_app = initialize_app(
     cred, {"storageBucket": "electric-eagles.appspot.com"}
 )
-db = firestore.client()
+
+if int(os.getenv("TESTING")) != 1:
+    db = firestore.client()
+else:
+    db = MockFirestore()

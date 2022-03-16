@@ -4,14 +4,10 @@
     ~~~~~~~~~~~~~~
     Functions:
         create_event()
+        delete_event()
         update_event()
-        get_all_events()
         get_event()
-        get_recent_events()
-        get_next_event_page()
-        register_event()
-        update_event()
-        change_status()
+        get_events()
 """
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request

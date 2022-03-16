@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*
 """
-    tests.api.test_admin
+    tests.api.test_users
     ~~~~~~~~~~~~~~~~~~~~
 """
 from tests.base import BaseTestCase
 
 
-class TestAdminBlueprint(BaseTestCase):
-    """Tests for admin endpoints"""
+class TestUsersBlueprint(BaseTestCase):
+    """Tests for users endpoints"""
+
     pass
