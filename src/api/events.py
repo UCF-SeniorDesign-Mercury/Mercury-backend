@@ -81,7 +81,9 @@ def create_event() -> Response:
         return BadRequest("Missing the type")
     if "period" not in data or not isinstance(data.get("period"), bool):
         return BadRequest("Missing the period")
-    if "invitees_dod" not in data or isinstance(data.get("invitees_dod"), list):
+    if "invitees_dod" not in data or not isinstance(
+        data.get("invitees_dod"), list
+    ):
         return BadRequest("Missing the invitees_dod")
     if "organizer" not in data or not data.get("organizer").strip():
         return BadRequest("Missing the organizer")
