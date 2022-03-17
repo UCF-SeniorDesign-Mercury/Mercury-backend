@@ -12,13 +12,12 @@ from flask import Response, request
 from src.common.decorators import admin_only, check_token
 from werkzeug.exceptions import BadRequest, NotFound
 from firebase_admin import storage, auth
-from werkzeug.exceptions import BadRequest, NotFound
 from uuid import uuid4
 from flask import jsonify
-import json
 
 from src.common.database import db
 from src.api import Blueprint
+from src.common.helpers import find_subordinates_by_dod
 
 users: Blueprint = Blueprint("users", __name__)
 
@@ -457,31 +456,14 @@ def get_subordinate() -> Response:
         500:
             description: Internal API Error
     """
-    name: str = request.args.get("name", type=str)
     dod: str = request.args.get("dod", type=str)
-    bucket = storage.bucket()
-    org_json_path: str = "org/org.json"
 
     if "dod" in request.args:
-        blob = bucket.blob(org_json_path)
-        if not blob.exists():
+        try:
+            subordinates: list = find_subordinates_by_dod(dod)
+        except:
             return NotFound("The org chart file not found")
-
-        # download the signature image
-        org_file: str = blob.download_as_bytes().decode("utf-8")
-        org: list = json.loads(org_file).get("org")
-        subordinates: list = find_subordinates_by_dod(org, dod)
     else:
-        return BadRequest("At least one paramater required")
+        return BadRequest("Missing dod id")
 
     return jsonify(subordinates), 200
-
-
-def find_subordinates_by_dod(org: list, dod: str) -> list:
-    for people in org:
-        if people.get("dod") == dod:
-            return people.get("sub")
-        elif people.get("sub") != None:
-            return find_subordinates_by_dod(people.get("sub"), dod)
-        else:
-            continue

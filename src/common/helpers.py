@@ -6,7 +6,9 @@
         send_invite_email()
 """
 from smtplib import SMTP
-import os
+from werkzeug.exceptions import NotFound
+from firebase_admin import storage
+import json
 
 
 def send_invite_email(emails, document_id: str) -> None:
@@ -30,3 +32,32 @@ def send_invite_email(emails, document_id: str) -> None:
     for email in emails:
         server.sendmail("YOUR_EMAIL_HERE", "RECIPIENT_EMAIL_HERE", msg)
     server.quit()
+
+
+def find_subordinates_by_dod(dod: str) -> list:
+    bucket = storage.bucket()
+    org_json_path: str = "org/org.json"
+    blob = bucket.blob(org_json_path)
+    if not blob.exists():
+        return NotFound("The org chart file not found")
+    # download the org tree
+    org_file: str = blob.download_as_bytes().decode("utf-8")
+    org: list = json.loads(org_file).get("org")
+
+    for people in org:
+        if people.get("dod") == dod:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_dod(people.get("sub"), dod)
+        else:
+            continue
+
+
+def find_subordinates_by_dod(org: list, dod: str) -> list:
+    for people in org:
+        if people.get("dod") == dod:
+            return people.get("sub")
+        elif people.get("sub") != None:
+            return find_subordinates_by_dod(people.get("sub"), dod)
+        else:
+            continue
