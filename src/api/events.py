@@ -359,9 +359,66 @@ def get_events() -> Response:
 
     events: list = []
     for doc in docs:
-        events.append(doc.to_dict())
+        temp: dict = doc.to_dict()
+        temp["confirmed_dod"] = None
+        temp["invitees_dod"] = None
+        events.append(temp)
 
     return jsonify(events), 200
+
+
+@events.get("/get_event/<event_id>")
+@check_token
+def get_event(event_id: str) -> Response:
+    """
+    Get the event from database.
+    ---
+    tags:
+        - event
+    summary: Gets the event
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # Check user access levels
+    # Decode token to obtain user's firebase id
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # get the user table
+    event_ref = db.collection("User").document(event_id).get()
+    if event_ref.exists == False:
+        return NotFound("The user was not found")
+    event: dict = event_ref.to_dict()
+    event["confirmed_dod"] = None
+    event["invitees_dod"] = None
+
+    if event.get("author") != uid:
+        return Unauthorized(
+            "The user is not authorized to retrieve this content"
+        )
+
+    return jsonify(event), 200
 
 
 @events.post("/confirm_event/<event_id>")
