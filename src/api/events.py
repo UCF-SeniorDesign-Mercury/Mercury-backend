@@ -412,8 +412,8 @@ def confirm_event(event_id: str) -> Response:
 
     event_ref.update(
         {
-            "invitees_dod": firestore.ArrayRemove(user.get("dod")),
-            "confirmed_dod": firestore.ArrayUnion(user.get("dod")),
+            "invitees_dod": firestore.ArrayRemove([user.get("dod")]),
+            "confirmed_dod": firestore.ArrayUnion([user.get("dod")]),
         }
     )
 
