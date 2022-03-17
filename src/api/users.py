@@ -320,9 +320,6 @@ def get_user() -> Response:
         profile_picture = blob.download_as_bytes()
         user["profile_picture"] = profile_picture.decode("utf-8")
 
-    # remove the uid from data
-    user["uid"] = None
-
     return jsonify(user), 200
 
 
@@ -351,6 +348,11 @@ def get_users() -> Response:
           schema:
             type: integer
           required: false
+        - in: query
+          name: dod
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
@@ -375,9 +377,14 @@ def get_users() -> Response:
 
     user_docs: list = []
     target: str = request.args.get("target", type=str)
+    dod: str = request.args.get("dod", type=str)
 
     # exact search
-    if "target" in request.args:
+    if "dod" in request.args:
+        user_docs = (
+            db.collection("User").where("dod", "==", dod).limit(1).stream()
+        )
+    elif "target" in request.args:
         if target == "officer":
             user_docs = (
                 db.collection("User")
@@ -412,9 +419,7 @@ def get_users() -> Response:
 
     users: list = []
     for user in user_docs:
-        temp: dict = user.to_dict()
-        temp["uid"] = None
-        users.append(temp)
+        users.append(user.to_dict())
 
     return jsonify(users), 200
 
