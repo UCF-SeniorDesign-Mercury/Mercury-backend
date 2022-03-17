@@ -12,6 +12,7 @@
         change_status()
 """
 from datetime import datetime
+from itertools import chain
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
@@ -305,6 +306,12 @@ def get_events() -> Response:
             type: integer
           example: default is 10.
           required: false
+        - in: query
+          name: target
+          schema:
+            type: integer
+          description: 0 -> unconfirmed event || 1 -> confirmed event || 2 -> both confirmed and unconfirmed || 3 -> created events
+          required: fasle
     responses:
         200:
             content:
@@ -337,31 +344,102 @@ def get_events() -> Response:
     user: dict = user_ref.get().to_dict()
 
     page_limit: int = request.args.get("page_limit", type=int, default=10)
+    target: int = request.args.get("target", type=int, default=1)
 
     if "type" in request.args:
         type: str = request.args.get("type", type=str)
-        docs: list = (
-            db.collection("Scheduled-Events")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("confirmed_dod", "array_contains", user.get("dod"))
-            .where("type", "==", type)
-            .limit(page_limit)
-            .stream()
-        )
+        if target == 0:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 1:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 2:
+            docs1: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+            docs2: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+            docs = chain(docs1, docs2)
+        else:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("author", "==", uid)
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
     else:
-        docs: list = (
-            db.collection("Scheduled-Events")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            .where("confirmed_dod", "array_contains", user.get("dod"))
-            .limit(page_limit)
-            .stream()
-        )
+        if target == 0:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 1:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 2:
+            docs1: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+            docs2: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+            docs = chain(docs1, docs2)
+        else:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("author", "==", uid)
+                .limit(page_limit)
+                .stream()
+            )
 
     events: list = []
     for doc in docs:
         temp: dict = doc.to_dict()
-        temp["confirmed_dod"] = None
-        temp["invitees_dod"] = None
+        del temp["confirmed_dod"]
+        del temp["invitees_dod"]
         events.append(temp)
 
     return jsonify(events), 200
