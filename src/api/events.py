@@ -117,7 +117,13 @@ def create_event() -> Response:
     # notify users
     try:
         for dod in data.get("invitees_dod"):
-            create_notification("create event", None, uid, dod, None)
+            create_notification(
+                notification_type="create event",
+                type="event invitation",
+                sender=uid,
+                id=entry["event_id"],
+                receiver_dod=dod,
+            )
     except:
         return NotFound("The invitee was not found")
 

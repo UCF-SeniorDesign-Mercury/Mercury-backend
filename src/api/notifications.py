@@ -22,8 +22,9 @@ notifications: Blueprint = Blueprint("notifications", __name__)
 
 def create_notification(
     notification_type: str,
-    file_type: str,
+    type: str,
     sender: str,
+    id: str,
     receiver_dod: str,
     receiver_uid: str,
 ):
@@ -31,8 +32,9 @@ def create_notification(
     entry["notification_type"] = notification_type
     entry["sender"] = sender
     entry["read"] = False
-    entry["file_type"] = file_type
+    entry["type"] = type
     entry["notification_id"] = str(uuid4())
+    entry["id"] = id
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
 
     if receiver_uid != None:
@@ -55,11 +57,20 @@ def create_notification(
 
         entry["receiver"] = receiver_list[0].get("uid")
 
+    # update firesotre
     db.collection("Notification").document(entry.get("notification_id")).set(
         entry
     )
+
+    # updates the firebase realtime database
     rtd.reference("/notifications").child(entry.get("notification_id")).set(
-        entry
+        {
+            "notification_type": notification_type,
+            "sender": sender,
+            "type": type,
+            "id": id,
+            "notification_id": entry["notification_id"],
+        }
     )
 
 
@@ -214,6 +225,8 @@ def read_notification(notification_id: str):
         return BadRequest("The notification has been read")
 
     notification_ref.update({"read": True})
+
+    rtd.reference("/notifications").child(notification_id).delete()
 
     return Response("Notification marked as read", 200)
 
