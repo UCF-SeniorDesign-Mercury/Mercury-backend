@@ -124,7 +124,8 @@ def upload_file() -> Response:
         try:
             create_notification(
                 notification_type="recommend file",
-                file_type=data.get("filetype"),
+                type=data.get("filetype"),
+                id=file_id,
                 sender=uid,
                 receiver_dod=data.get("recommender"),
                 receiver_uid=None,
@@ -133,16 +134,17 @@ def upload_file() -> Response:
             return NotFound("The recommender was not found")
     else:
         # notification send to reviewer
-        # try:
-        create_notification(
-            notification_type="review file",
-            file_type=data.get("filetype"),
-            sender=uid,
-            receiver_dod=data.get("reviewer"),
-            receiver_uid=None,
-        )
-        # except:
-        #     return NotFound("The reviewer was not found")
+        try:
+            create_notification(
+                notification_type="review file",
+                type=data.get("filetype"),
+                sender=uid,
+                id=file_id,
+                receiver_dod=data.get("reviewer"),
+                receiver_uid=None,
+            )
+        except:
+            return NotFound("The reviewer was not found")
 
     db.collection("Files").document(file_id).set(entry)
 
@@ -394,8 +396,9 @@ def update_file():
             # notification send to recommender
             create_notification(
                 notification_type="recommend " + " file",
-                file_type=data.get("filetype"),
+                type=data.get("filetype"),
                 sender=uid,
+                id=file.get("id"),
                 receiver_uid=None,
                 receiver_dod=data.get("recommender"),
             )
@@ -520,24 +523,27 @@ def review_file():
         if data.get("decision") == 3:
             create_notification(
                 notification_type="resubmit file",
-                file_type=file.get("filetype"),
+                type=file.get("filetype"),
                 sender=reviewer_uid,
+                id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
             )
         elif data.get("decision") == 4:
             create_notification(
                 notification_type="file approved",
-                file_type=file.get("filetype"),
+                type=file.get("filetype"),
                 sender=reviewer_uid,
+                id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
             )
         elif data.get("decision") == 5:
             create_notification(
                 notification_type="file rejected",
-                file_type=file.get("filetype"),
+                type=file.get("filetype"),
                 sender=reviewer_uid,
+                id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
             )
@@ -948,24 +954,27 @@ def give_recommendation():
         if data.get("is_recommended"):
             create_notification(
                 notification_type="positive recommendation",
-                file_type=file.get("filetype"),
+                type=file.get("filetype"),
                 sender=uid,
+                id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
             )
         else:
             create_notification(
                 notification_type="negative recommendation",
-                file_type=file.get("filetype"),
+                type=file.get("filetype"),
                 sender=uid,
+                id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
             )
         # notified the reviewer to review this file
         create_notification(
             notification_type="review file",
-            file_type=file.get("filetype"),
+            type=file.get("filetype"),
             sender=uid,
+            id=data.get("file_id"),
             receiver_dod=file.get("reviewer"),
             receiver_uid=None,
         )
