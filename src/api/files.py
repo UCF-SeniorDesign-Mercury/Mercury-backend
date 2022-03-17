@@ -133,16 +133,16 @@ def upload_file() -> Response:
             return NotFound("The recommender was not found")
     else:
         # notification send to reviewer
-        try:
-            create_notification(
-                notification_type="review file",
-                file_type=data.get("filetype"),
-                sender=uid,
-                receiver_dod=data.get("reviewer"),
-                receiver_uid=None,
-            )
-        except:
-            return NotFound("The reviewer was not found")
+        # try:
+        create_notification(
+            notification_type="review file",
+            file_type=data.get("filetype"),
+            sender=uid,
+            receiver_dod=data.get("reviewer"),
+            receiver_uid=None,
+        )
+        # except:
+        #     return NotFound("The reviewer was not found")
 
     db.collection("Files").document(file_id).set(entry)
 

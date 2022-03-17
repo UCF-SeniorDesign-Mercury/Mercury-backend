@@ -9,13 +9,12 @@
         delete_notifications()
 """
 from firebase_admin import auth, firestore
-from firebase_admin.auth import UserRecord
 from flask import Response, jsonify, request
 from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
-from src.common.database import db
+from src.common.database import db, rtd
 from src.common.decorators import check_token
 
 notifications: Blueprint = Blueprint("notifications", __name__)
@@ -57,6 +56,9 @@ def create_notification(
         entry["receiver"] = receiver_list[0].get("uid")
 
     db.collection("Notification").document(entry.get("notification_id")).set(
+        entry
+    )
+    rtd.reference("/notifications").child(entry.get("notification_id")).set(
         entry
     )
 
