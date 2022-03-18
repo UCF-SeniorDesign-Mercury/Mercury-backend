@@ -460,7 +460,7 @@ def get_subordinate() -> Response:
 
     if "dod" in request.args:
         try:
-            subordinates: list = find_subordinates_by_dod(dod)
+            subordinates: list = find_subordinates_by_dod(dod=dod)
         except:
             return NotFound("The org chart file not found")
     else:

@@ -48,16 +48,16 @@ def find_subordinates_by_dod(dod: str) -> list:
         if people.get("dod") == dod:
             return people.get("sub")
         elif people.get("sub") != None:
-            return find_subordinates_by_dod(people.get("sub"), dod)
+            return find_subordinates_by_dod_recur(people.get("sub"), dod)
         else:
             continue
 
 
-def find_subordinates_by_dod(org: list, dod: str) -> list:
+def find_subordinates_by_dod_recur(org: list, dod: str) -> list:
     for people in org:
         if people.get("dod") == dod:
             return people.get("sub")
         elif people.get("sub") != None:
-            return find_subordinates_by_dod(people.get("sub"), dod)
+            return find_subordinates_by_dod_recur(people.get("sub"), dod)
         else:
             continue

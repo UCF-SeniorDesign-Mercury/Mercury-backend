@@ -480,9 +480,26 @@ Notification:
     read:
       type: boolean
       required: true
-    file_tpye:
+    tpye:
+      type: string
+      required: true
+    id:
       type: string
       required: true
     notification_id:
       type: string
       required: true
+
+# --------------------------------- Medical Data ------------------------------- #
+UploadMedical:
+  type: object
+  properties:
+    filename:
+      type: string
+      required: true
+      description: must to be csv file
+    csv_file:
+      type: string
+      formate: base64
+      required: true
+      description: the well format csv file

@@ -11,6 +11,7 @@ from src.api.roles import roles
 from src.api.events import events
 from src.api.files import files
 from src.api.users import users
+from src.api.medical import medical
 from src.api.notifications import notifications
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -58,6 +59,7 @@ app.register_blueprint(events, url_prefix="/events")
 app.register_blueprint(roles, url_prefix="/roles")
 app.register_blueprint(files, url_prefix="/files")
 app.register_blueprint(users, url_prefix="/users")
+app.register_blueprint(medical, url_prefix="/medical")
 app.register_blueprint(notifications, url_prefix="/notifications")
 
 
