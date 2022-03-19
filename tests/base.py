@@ -1,14 +1,19 @@
 from flask_testing import TestCase
+from src import app
+from src.common.database import db
 
 
 class BaseTestCase(TestCase):
     def create_app(self):
-        pass
+        return app
 
     @classmethod
     def setUpClass(cls):
-        pass
+        db.reset()
 
     @classmethod
     def tearDownClass(cls):
-        pass
+        db.reset()
+
+    def tearDown(self):
+        db.reset()

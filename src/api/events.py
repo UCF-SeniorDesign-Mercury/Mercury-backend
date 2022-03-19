@@ -4,12 +4,10 @@
     ~~~~~~~~~~~~~~
     Functions:
         create_event()
+        delete_event()
         update_event()
-        get_all_events()
         get_event()
-        get_recent_events()
-        register_event()
-        change_status()
+        get_events()
 """
 from datetime import datetime
 from itertools import chain
