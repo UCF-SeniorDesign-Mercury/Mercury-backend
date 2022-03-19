@@ -16,7 +16,7 @@ poetry install
 ### Running the application
 
 ```bash
-poetry run python -m src run
+poetry run python -m src run --port=5000
 ```
 
 ### Running unit tests

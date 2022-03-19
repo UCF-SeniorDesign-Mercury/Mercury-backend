@@ -1,1 +1,1 @@
-web: python -m src run
+web: python -m src run --host=0.0.0.0 --port=8080
