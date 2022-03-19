@@ -553,9 +553,9 @@ python-versions = "*"
 
 [[package]]
 name = "mock-firestore"
-version = "0.10.0"
+version = "0.11.0"
 description = "In-memory implementation of Google Cloud Firestore for use in tests"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -964,7 +964,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "3.8.12"
-content-hash = "ad7adabbe5cfb075b46fda1274d45ed4e1d05a1671e21f811f628c2b38141abd"
+content-hash = "740fcc8bcb9f2c6e6f6309a68b0d91ee9799e23c331f68a59143a58534f7c793"
 
 [metadata.files]
 atomicwrites = [
@@ -1368,8 +1368,8 @@ mistune = [
     {file = "mistune-0.8.4.tar.gz", hash = "sha256:59a3429db53c50b5c6bcc8a07f8848cb00d7dc8bdb431a4ab41920d201d4756e"},
 ]
 mock-firestore = [
-    {file = "mock-firestore-0.10.0.tar.gz", hash = "sha256:b7967bd76baff6682aca97b8f0850144beab4ddc071c6c877c156715eff65423"},
-    {file = "mock_firestore-0.10.0-py3-none-any.whl", hash = "sha256:c01f30ab4603024e5e50f241ec39c3e2e3dbb5c4b4600c981d9991be4e6c108d"},
+    {file = "mock-firestore-0.11.0.tar.gz", hash = "sha256:4958b983534b890f7cdffe12b651b1deefa6ee202ee46af751c6bdaa44fe3432"},
+    {file = "mock_firestore-0.11.0-py3-none-any.whl", hash = "sha256:9e847a886a64d490bf13e2d52105745b6618d6a7e7169aeb62d4b895c405d204"},
 ]
 msgpack = [
     {file = "msgpack-1.0.2-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:b6d9e2dae081aa35c44af9c4298de4ee72991305503442a5c74656d82b581fe9"},
