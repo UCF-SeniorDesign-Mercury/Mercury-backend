@@ -5,18 +5,28 @@ This backend is created using Flask and is still in development and for local te
 ## Setup
 
 
-**Installing the packages**
+### Installing the packages
 
 The project requires poetry (version >= 1.1.12). Installation instructions: [_link_](https://python-poetry.org/docs/#installation)
 
-```
+```bash
 poetry install
 ```
 
-**Running the application**
+### Running the application
 
-```
+```bash
 poetry run python -m src run
+```
+
+### Running unit tests
+
+**Prerequisite**:
+
+To run unit tests, you need to add `TESTING = 1` line to the `.env` file.
+
+```bash
+poetry run python -m src test
 ```
 
 ## Documentation

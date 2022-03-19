@@ -72,6 +72,7 @@ virtualenv = "20.10.0"
 virtualenv-clone = "0.5.7"
 Werkzeug = "1.0.1"
 zipp = "3.6.0"
+pytest-mock = "^3.7.0"
 
 [tool.poetry.scripts]
 backend = "src.__main__:main"
@@ -82,6 +83,8 @@ pytest = "=6.2.5"
 coverage = "^6.3.1"
 Flask-Testing = "^0.8.1"
 black = "^22.1.0"
+firebase-token-generator = "^2.0.1"
+flake8 = "^4.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

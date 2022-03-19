@@ -7,7 +7,6 @@
         admin_only()
 """
 from functools import wraps
-from src.common.database import db
 from flask import request
 from firebase_admin import auth
 from werkzeug.exceptions import Unauthorized
@@ -27,7 +26,6 @@ def check_token(f):
         """
         if not request.headers.get("Authorization"):
             raise Unauthorized("Authorization token not provided")
-
         token: str = request.headers["Authorization"]
 
         try:
