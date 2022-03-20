@@ -12,13 +12,12 @@ from flask import Response, request
 from src.common.decorators import admin_only, check_token
 from werkzeug.exceptions import BadRequest, NotFound
 from firebase_admin import storage, auth
-from werkzeug.exceptions import BadRequest, NotFound
 from uuid import uuid4
 from flask import jsonify
-import json
 
 from src.common.database import db
 from src.api import Blueprint
+from src.common.helpers import find_subordinates_by_dod
 
 users: Blueprint = Blueprint("users", __name__)
 
@@ -41,7 +40,7 @@ def register_user() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/UserRegister'
+                    $ref: '#/components/schemas/RegisterUser'
     responses:
         201:
             description: User registered
@@ -67,6 +66,7 @@ def register_user() -> Response:
 
     # save data to firestore batabase
     entry: dict = dict()
+    entry["uid"] = uid
     entry["name"] = user_data.get("name")
     entry["email"] = decoded_token.get("email")
     entry["user_status"] = 1
@@ -126,7 +126,7 @@ def update_user() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/UserUpdate'
+                    $ref: '#/components/schemas/UpdateUser'
     responses:
         201:
             description: Successfully update user data
@@ -347,6 +347,11 @@ def get_users() -> Response:
           schema:
             type: integer
           required: false
+        - in: query
+          name: dod
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
@@ -371,9 +376,14 @@ def get_users() -> Response:
 
     user_docs: list = []
     target: str = request.args.get("target", type=str)
+    dod: str = request.args.get("dod", type=str)
 
     # exact search
-    if "target" in request.args:
+    if "dod" in request.args:
+        user_docs = (
+            db.collection("User").where("dod", "==", dod).limit(1).stream()
+        )
+    elif "target" in request.args:
         if target == "officer":
             user_docs = (
                 db.collection("User")
@@ -429,11 +439,6 @@ def get_subordinate() -> Response:
             type: string
           required: true
         - in: query
-          name: name
-          schema:
-            type: string
-          required: false
-        - in: query
           name: dod
           schema:
             type: string
@@ -451,51 +456,14 @@ def get_subordinate() -> Response:
         500:
             description: Internal API Error
     """
-    name: str = request.args.get("name", type=str)
     dod: str = request.args.get("dod", type=str)
-    bucket = storage.bucket()
-    org_json_path: str = "org/org.json"
-    if "name" in request.args:
-        blob = bucket.blob(org_json_path)
-        if not blob.exists():
+
+    if "dod" in request.args:
+        try:
+            subordinates: list = find_subordinates_by_dod(dod=dod)
+        except:
             return NotFound("The org chart file not found")
-
-        # download the signature image
-        org_file: str = blob.download_as_bytes().decode("utf-8")
-        org: list = json.loads(org_file).get("org")
-        subordinates: list = find_subordinates_by_name(org, name)
-        return jsonify(subordinates), 200
-
-    elif "dod" in request.args:
-        blob = bucket.blob(org_json_path)
-        if not blob.exists():
-            return NotFound("The org chart file not found")
-
-        # download the signature image
-        org_file: str = blob.download_as_bytes().decode("utf-8")
-        org: list = json.loads(org_file).get("org")
-        subordinates: list = find_subordinates_by_dod(org, dod)
     else:
-        return BadRequest("At least one paramater required")
+        return BadRequest("Missing dod id")
 
     return jsonify(subordinates), 200
-
-
-def find_subordinates_by_name(org: list, name: str) -> list:
-    for people in org:
-        if people.get("name") == name:
-            return people.get("sub")
-        elif people.get("sub") != None:
-            return find_subordinates_by_name(people.get("sub"), name)
-        else:
-            continue
-
-
-def find_subordinates_by_dod(org: list, dod: str) -> list:
-    for people in org:
-        if people.get("dod") == dod:
-            return people.get("sub")
-        elif people.get("sub") != None:
-            return find_subordinates_by_dod(people.get("sub"), dod)
-        else:
-            continue

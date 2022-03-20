@@ -19,6 +19,7 @@ from src.api import Blueprint
 from firebase_admin import storage, auth, firestore
 from flask import Response, request, jsonify
 from uuid import uuid4
+from src.api.notifications import create_notification
 from werkzeug.exceptions import (
     InternalServerError,
     BadRequest,
@@ -81,10 +82,10 @@ def upload_file() -> Response:
     user: dict = user_ref.get().to_dict()
 
     # Exceptions
-    if "file" in data:
-        file = data.get("file")
-    else:
+    if "file" not in data or not data.get("file").strip():
         return BadRequest("There was no file provided")
+    else:
+        file = data.get("file")
 
     if (
         data.get("filetype") != "rst_request"
@@ -97,8 +98,11 @@ def upload_file() -> Response:
     if user.get("signature") == None and data.get("signature") == None:
         return BadRequest("Missing the signature")
 
-    if "reviewer" not in data:
+    if "reviewer" not in data or not data.get("reviewer").strip():
         return BadRequest("Missing the reviewer")
+
+    if "filename" not in data or not data.get("filename").strip():
+        return BadRequest("Missing the filename")
 
     # save data to firestore batabase
     entry: dict = dict()
@@ -112,11 +116,35 @@ def upload_file() -> Response:
     entry["comment"] = ""
     entry["reviewer_visible"] = True
     if "recommender" in data and data.get("filetype") == "rst_request":
+        if not data.get("recommender").strip():
+            return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
         entry["reviewer_visible"] = False
         # notification send to recommender
-    # else:
-    # notification send to reviewer
+        try:
+            create_notification(
+                notification_type="recommend file",
+                type=data.get("filetype"),
+                id=file_id,
+                sender=uid,
+                receiver_dod=data.get("recommender"),
+                receiver_uid=None,
+            )
+        except:
+            return NotFound("The recommender was not found")
+    else:
+        # notification send to reviewer
+        try:
+            create_notification(
+                notification_type="review file",
+                type=data.get("filetype"),
+                sender=uid,
+                id=file_id,
+                receiver_dod=data.get("reviewer"),
+                receiver_uid=None,
+            )
+        except:
+            return NotFound("The reviewer was not found")
 
     db.collection("Files").document(file_id).set(entry)
 
@@ -129,7 +157,9 @@ def upload_file() -> Response:
         return InternalServerError("Could not save pdf")
 
     # update signature
-    if data.get("signature") != None:
+    if "signature" in data:
+        if "signature" in user:
+            signature_path = user.get("signature")
         try:
             # save signature image to firebase storage
             blob = bucket.blob(signature_path)
@@ -205,9 +235,9 @@ def get_file(file_id: str) -> Response:
 
     # Only the author, reviewer, and admin have access to the data
     if (
-        user.get("name") != res.get("reviewer")
+        user.get("dod") != res.get("reviewer")
         and uid != res.get("author")
-        and user.get("name") != res.get("recommender")
+        and user.get("dod") != res.get("recommender")
         and decoded_token.get("admin") != True
     ):
         return Unauthorized(
@@ -216,7 +246,7 @@ def get_file(file_id: str) -> Response:
 
     # download the pdf file and add it to the file data
     if "signature" not in user:
-        return BadRequest("The user need a signature")
+        return BadRequest("User need upload a signature")
     signature_path: str = user.get("signature")
     blob = bucket.blob(signature_path)
     if not blob.exists():
@@ -269,10 +299,10 @@ def delete_file(file_id: str) -> Response:
     file_path: str = "file/" + file_id
 
     # get file data from firestore
-    data_ref = db.collection("Files").document(file_id)
-    if not data_ref.get().exists:
+    file_ref = db.collection("Files").document(file_id)
+    if not file_ref.get().exists:
         return NotFound("The file was not found")
-    data: dict = data_ref.get().to_dict()
+    data: dict = file_ref.get().to_dict()
 
     # Only the author, reviewer, and admin have access to the data
     if (
@@ -292,7 +322,7 @@ def delete_file(file_id: str) -> Response:
     blob.delete()
 
     # delete the data from firesotre
-    data_ref.delete()
+    file_ref.delete()
 
     return Response(response="File deleted", status=200)
 
@@ -356,17 +386,24 @@ def update_file():
             "The user is not authorized to retrieve this content"
         )
 
-    # # Only rst_request could have recommender
-    # if "recommender" in data and files.get("filetype") != "rst_request":
-    #     return BadRequest("Only rst_request files could have recommender")
+    # Only rst_request could have recommender
+    if "recommender" in data and files.get("filetype") != "rst_request":
+        return BadRequest("Only rst_request files could have recommender")
 
     if "recommender" in data:
         file_ref.update({"recommender": data.get("recommender")})
-        # notification send to recommender
-
-    # if "reviewer" in data:
-    #     file_ref.update({"reviewer": data.get("reviewer")})
-    #     # notification send to reviewer
+        try:
+            # notification send to recommender
+            create_notification(
+                notification_type="recommend " + " file",
+                type=data.get("filetype"),
+                sender=uid,
+                id=file.get("id"),
+                receiver_uid=None,
+                receiver_dod=data.get("recommender"),
+            )
+        except:
+            return NotFound("The recommender was not found")
 
     if "filename" in data:
         file_ref.update({"filename": data.get("filename")})
@@ -375,13 +412,10 @@ def update_file():
     bucket = storage.bucket()
     file_path: str = "file/" + data.get("file_id")
     if "file" in data:
-        try:
-            blob = bucket.blob(file_path)
-            blob.upload_from_string(
-                data.get("file"), content_type="application/pdf"
-            )
-        except:
-            return InternalServerError("cannot update pdf to storage")
+        blob = bucket.blob(file_path)
+        blob.upload_from_string(
+            data.get("file"), content_type="application/pdf"
+        )
 
     # save pdf to firestore storage
     if "signature" in data:
@@ -400,15 +434,15 @@ def update_file():
     return Response("File Updated", 200)
 
 
-@files.put("/change_status")
+@files.put("/review_file")
 @check_token
-def change_status():
+def review_file():
     """
-    Change the status of a file case from Firebase Storage.
+    Review the file from Firebase Storage.
     ---
     tags:
         - files
-    summary: Change the status
+    summary: Review the file
     parameters:
         - in: header
           name: Authorization
@@ -419,7 +453,7 @@ def change_status():
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/FileStatus'
+                    $ref: '#/components/schemas/ReviewFile'
     responses:
         200:
             description: Status changed
@@ -435,17 +469,28 @@ def change_status():
     # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
-    uid: str = decoded_token.get("uid")
-    # get the user table
-    reviewer_ref = db.collection("User").document(uid).get()
-    if reviewer_ref.exists == False:
-        return NotFound("The user was not found")
-    reviewer: dict = reviewer_ref.to_dict()
+    reviewer_uid: str = decoded_token.get("uid")
     data: dict = request.get_json()
 
     # exceptions
-    if data.get("decision") < 3 or data.get("decision") > 5:
-        return BadRequest("Unsupported decision type.")
+    if (
+        "decision" not in data
+        or data.get("decision") < 3
+        or data.get("decision") > 5
+    ):
+        return BadRequest("Unsupported decision type")
+
+    if "file_id" not in data or not data.get("file_id").strip():
+        return BadRequest("Missing the file id")
+
+    if "file" not in data or not data.get("file").strip():
+        return BadRequest("Missing the file")
+
+    # get the user table
+    reviewer_ref = db.collection("User").document(reviewer_uid).get()
+    if reviewer_ref.exists == False:
+        return NotFound("The user was not found")
+    reviewer: dict = reviewer_ref.to_dict()
 
     # fetch the file data from firestore
     file_ref = db.collection("Files").document(data.get("file_id"))
@@ -455,7 +500,7 @@ def change_status():
 
     # Only the reviewer, and admin have access to change the status of the file
     if (
-        reviewer.get("name") != file.get("reviewer")
+        reviewer.get("dod") != file.get("reviewer")
         and decoded_token.get("admin") != True
     ):
         return Unauthorized(
@@ -467,7 +512,43 @@ def change_status():
 
     file_ref.update({"status": data.get("decision")})
 
+    # update the file in the storage
+    bucket = storage.bucket()
+    file_path: str = "file/" + data.get("file_id")
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(data.get("file"), content_type="application/pdf")
+
     # notified user the decision
+    try:
+        if data.get("decision") == 3:
+            create_notification(
+                notification_type="resubmit file",
+                type=file.get("filetype"),
+                sender=reviewer_uid,
+                id=data.get("file_id"),
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        elif data.get("decision") == 4:
+            create_notification(
+                notification_type="file approved",
+                type=file.get("filetype"),
+                sender=reviewer_uid,
+                id=data.get("file_id"),
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        elif data.get("decision") == 5:
+            create_notification(
+                notification_type="file rejected",
+                type=file.get("filetype"),
+                sender=reviewer_uid,
+                id=data.get("file_id"),
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+    except:
+        return NotFound("The author was not found")
 
     return Response("Status changed", 200)
 
@@ -575,9 +656,9 @@ def get_user_files() -> Response:
     return jsonify(files), 200
 
 
-@files.get("/review_user_files")
+@files.get("/get_review_files")
 @check_token
-def review_user_files() -> Response:
+def get_review_files() -> Response:
     """
     Get 10 unreviewed user files from Firebase.
     ---
@@ -678,7 +759,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("filetype", "==", filetype)
                 .where("reviewer_visible", "==", True)
@@ -689,7 +770,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
@@ -699,7 +780,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("filetype", "==", filetype)
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
@@ -709,7 +790,7 @@ def review_user_files() -> Response:
             file_docs = (
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
-                .where("reviewer", "==", user.get("name"))
+                .where("reviewer", "==", user.get("dod"))
                 .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
@@ -773,7 +854,7 @@ def get_recommend_files() -> Response:
     file_docs = (
         db.collection("Files")
         .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .where("recommender", "==", user.get("name"))
+        .where("recommender", "==", user.get("dod"))
         .where("status", "in", [1, 2, 3])
         .limit(page_limit)
         .stream()
@@ -804,7 +885,7 @@ def give_recommendation():
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/FileRecommend'
+                    $ref: '#/components/schemas/RecommendFile'
     responses:
         200:
             description: "Recommendation is posted"
@@ -821,12 +902,23 @@ def give_recommendation():
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    data: dict = request.get_json()
+
+    # exceptions
+    if "file_id" not in data or not data.get("file_id").strip():
+        return BadRequest("Missing the file id")
+
+    if "file" not in data or not data.get("file").strip():
+        return BadRequest("Missing the file")
+
+    if "is_recommended" not in data:
+        return BadRequest("Missing the recommendation result")
+
     # get the user table
     recommender_ref = db.collection("User").document(uid).get()
     if recommender_ref.exists == False:
         return NotFound("The user was not found")
     recommender: dict = recommender_ref.to_dict()
-    data: dict = request.get_json()
 
     # fetch the file data from firestore
     file_ref = db.collection("Files").document(data.get("file_id"))
@@ -834,17 +926,59 @@ def give_recommendation():
         return NotFound("The file not found")
     file: dict = file_ref.get().to_dict()
 
-    # Only the reviewer, and admin have access to change the status of the file
-    if recommender.get("name") != file.get("recommender"):
+    # Only the recommender have access to give recommendation of the file
+    if recommender.get("dod") != file.get("recommender"):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
+    if "comment" in data:
+        file_ref.update({"comment": data.get("comment")})
+
     file_ref.update(
-        {"is_recommend": data.get("is_recommend"), "reviewer_visible": True}
+        {
+            "is_recommended": data.get("is_recommended"),
+            "reviewer_visible": True,
+            "status": 2,
+        }
     )
 
-    # notified the user the decision
-    # notified the reviewer to review this file
+    # update the file from storage
+    bucket = storage.bucket()
+    file_path: str = "file/" + data.get("file_id")
+    blob = bucket.blob(file_path)
+    blob.upload_from_string(data.get("file"), content_type="application/pdf")
 
-    return Response("Recommendation is posted", 200)
+    # notified the user the decision
+    try:
+        if data.get("is_recommended"):
+            create_notification(
+                notification_type="positive recommendation",
+                type=file.get("filetype"),
+                sender=uid,
+                id=data.get("file_id"),
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        else:
+            create_notification(
+                notification_type="negative recommendation",
+                type=file.get("filetype"),
+                sender=uid,
+                id=data.get("file_id"),
+                receiver_uid=file.get("author"),
+                receiver_dod=None,
+            )
+        # notified the reviewer to review this file
+        create_notification(
+            notification_type="review file",
+            type=file.get("filetype"),
+            sender=uid,
+            id=data.get("file_id"),
+            receiver_dod=file.get("reviewer"),
+            receiver_uid=None,
+        )
+    except:
+        return NotFound("The reviewer was not found")
+
+    return Response("Recommend post", 200)

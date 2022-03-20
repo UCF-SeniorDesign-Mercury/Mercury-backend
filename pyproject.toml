@@ -72,6 +72,7 @@ virtualenv = "20.10.0"
 virtualenv-clone = "0.5.7"
 Werkzeug = "1.0.1"
 zipp = "3.6.0"
+pandas = "^1.4.1"
 pytest-mock = "^3.7.0"
 mock-firestore = "^0.11.0"
 

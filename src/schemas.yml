@@ -27,6 +27,11 @@ CreateEvent:
       type: string
       required: true
       example: The organizer name
+    invitees_dod:
+      type: array
+      required: true
+      items:
+        type: string
     description:
       type: string
       required: true
@@ -67,6 +72,16 @@ UpdateEvent:
       example: mandatory
       required: false
       description: mandatory, optional, or personal
+    add_invitees:
+      type: array
+      required: false
+      items:
+        type: string
+    remove_invitees:
+      type: array
+      required: false
+      items:
+        type: string
 
 Event:
   type: object
@@ -106,6 +121,16 @@ Event:
       type: string
       required: true
       example: The organier name
+    invitees_dod:
+      type: array
+      required: false
+      items:
+        type: string
+    confirmed_dod:
+      type: array
+      required: false
+      items:
+        type: string
     description:
       type: string
       required: true
@@ -275,7 +300,7 @@ UpdateFile:
       required: false
       description: The user signature
 
-FileStatus:
+ReviewFile:
   type: object
   properties:
     file_id:
@@ -288,13 +313,18 @@ FileStatus:
       required: true
       decription: Require resubmit = 3, Approved = 4, Rejected = 5
       example: 3
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
     comment:
       type: string
       required: false
       decription: this is the place the reviewer or admin could leave a commet for the author
       example: the date is wrong need resubmit it again.
 
-FileRecommend:
+RecommendFile:
   type: object
   properties:
     file_id:
@@ -302,13 +332,23 @@ FileRecommend:
       required: true
       description: this is the file id
       example: 623b6109-dc7b-4e1a-8562-f93160c743b1
-    is_recommend:
+    is_recommended:
       type: boolean
       required: true
       decription: recommend = true, non recommend = false
+    file:
+      type: string
+      format: byte
+      required: true
+      description: A file encoded in Base64
+    comment:
+      type: string
+      required: false
+      decription: this is the place the reviewer or admin could leave a commet for the author
+      example: the date is wrong need resubmit it again.
 
 # --------------------------------- User ------------------------------- #
-UserRegister:
+RegisterUser:
   type: object
   properties:
     name:
@@ -389,7 +429,7 @@ User:
       type: string
       required: false
 
-UserUpdate:
+UpdateUser:
   type: object
   properties:
     grade:
@@ -422,3 +462,44 @@ UserUpdate:
       type: string
       required: false
       example: 000-000-0000
+
+# --------------------------------- Notifications ------------------------------- #
+Notification:
+  type: object
+  properties:
+    notification_type:
+      type: string
+      required: true
+      description: review file, recommend file, file status update
+    sender:
+      type: string
+      required: true
+    receiver:
+      type: string
+      required: true
+    read:
+      type: boolean
+      required: true
+    tpye:
+      type: string
+      required: true
+    id:
+      type: string
+      required: true
+    notification_id:
+      type: string
+      required: true
+
+# --------------------------------- Medical Data ------------------------------- #
+UploadMedical:
+  type: object
+  properties:
+    filename:
+      type: string
+      required: true
+      description: must to be csv file
+    csv_file:
+      type: string
+      formate: base64
+      required: true
+      description: the well format csv file

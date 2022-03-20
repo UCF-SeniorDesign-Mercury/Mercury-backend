@@ -9,12 +9,15 @@
         get_event()
         get_events()
 """
+from datetime import datetime
+from itertools import chain
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
+from src.api.notifications import create_notification
 from src.common.database import db
 from src.common.decorators import admin_only, check_token
 
@@ -66,21 +69,61 @@ def create_event() -> Response:
     # add more initial information
     data: dict = request.get_json()
 
-    entry: dict = dict()
+    # Exceptions
+    if "title" not in data or not data.get("title").strip():
+        return BadRequest("Missing the title")
+    if "starttime" not in data or not data.get("starttime").strip():
+        return BadRequest("Missing the starttime")
+    if "endtime" not in data or not data.get("endtime").strip():
+        return BadRequest("Missing the endtime")
+    if "type" not in data or not data.get("type").strip():
+        return BadRequest("Missing the type")
+    if "period" not in data or not isinstance(data.get("period"), bool):
+        return BadRequest("Missing the period")
+    if "invitees_dod" not in data or not isinstance(
+        data.get("invitees_dod"), list
+    ):
+        return BadRequest("Missing the invitees_dod")
+    if "organizer" not in data or not data.get("organizer").strip():
+        return BadRequest("Missing the organizer")
 
+    entry: dict = dict()
+    try:
+        entry["starttime"] = datetime.fromisoformat(data.get("starttime"))
+    except:
+        return BadRequest("The starttime formate should be datetime type")
+    try:
+        entry["endtime"] = datetime.fromisoformat(data.get("endtime"))
+    except:
+        return BadRequest("The endtime formate should be datetime type")
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["title"] = data.get("title")
-    entry["starttime"] = data.get("starttime")
-    entry["endtime"] = data.get("endtime")
+    # entry["starttime"] = data.get("starttime")
+    # entry["endtime"] = data.get("endtime")
     entry["type"] = data.get("type")
     entry["period"] = data.get("period")
+    entry["invitees_dod"] = data.get("invitees_dod")
+    entry["confirmed_dod"] = []
     entry["organizer"] = data.get("organizer")
     entry["description"] = data.get("description")
 
     # write to Firestore DB
     db.collection("Scheduled-Events").document(entry.get("event_id")).set(entry)
+
+    # notify users
+    try:
+        for dod in data.get("invitees_dod"):
+            create_notification(
+                notification_type="create event",
+                type="event invitation",
+                sender=uid,
+                id=entry["event_id"],
+                receiver_dod=dod,
+            )
+    except:
+        return NotFound("The invitee was not found")
 
     # return Response 201 for successfully creating a new resource
     return Response(response="Event added", status=201)
@@ -175,8 +218,6 @@ def update_event() -> Response:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
@@ -195,46 +236,229 @@ def update_event() -> Response:
     if not event_ref.get().exists:
         return NotFound("The event was not found")
 
-    # Only the user could update the event
-    if event.get("author") != uid:
+    # Only the event organizer and admin could update the event
+    if event.get("author") != uid and decoded_token.get("admin") != True:
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
     # update event by given paramter
-    if "starttime" in event:
-        event_ref.update({"starttime": data.get("starttime")})
-    if "endtime" in event:
-        event_ref.update({"endtime": data.get("endtime")})
-    if "period" in event:
+    if "starttime" in data:
+        try:
+            event_ref.update(
+                {"starttime": datetime.fromisoformat(data.get("starttime"))}
+            )
+        except:
+            return BadRequest("The starttime formate should be datetime type")
+
+    if "endtime" in data:
+        try:
+            event_ref.update(
+                {"endtime": datetime.fromisoformat(data.get("endtime"))}
+            )
+        except:
+            return BadRequest("The endtime formate should be datetime type")
+
+    if "period" in data and data.get("period").strip():
         event_ref.update({"period": data.get("period")})
-    if "type" in event:
+    if "type" in data and data.get("type").strip():
         event_ref.update({"type": data.get("type")})
-    if "title" in event:
+    if "title" in data and data.get("title").strip():
         event_ref.update({"title": data.get("title")})
-    if "description" in event:
+    if "description" in data and data.get("description").strip():
         event_ref.update({"description": data.get("description")})
-    if "organizer" in event:
+    if "organizer" in data and data.get("organizer").strip():
         event_ref.update({"organizer": data.get("organizer")})
 
+    if "add_invitees" in data and data.get("add_invitees"):
+        event_ref.update(
+            {"invitees_dod": firestore.ArrayUnion(data.get("add_invitees"))}
+        )
+
+    if "remove_invitees" in data and data.get("remove_invitees"):
+        event_ref.update(
+            {"invitees_dod": firestore.ArrayRemove(data.get("remove_invitees"))}
+        )
+
     return Response(response="Event updated", status=200)
+
+
+@events.get("/get_events")
+@check_token
+def get_events() -> Response:
+    """
+    Get recent 10 events from database.
+    ---
+    tags:
+        - event
+    summary: Gets recent 10 events
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: type
+          schema:
+            type: string
+          example: mandatory, optional, or personal.
+          required: false
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          example: default is 10.
+          required: false
+        - in: query
+          name: target
+          schema:
+            type: integer
+          description: 0 -> unconfirmed event || 1 -> confirmed event || 2 -> both confirmed and unconfirmed || 3 -> created events
+          required: fasle
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # Check user access levels
+    # Decode token to obtain user's firebase id
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
+    page_limit: int = request.args.get("page_limit", type=int, default=10)
+    target: int = request.args.get("target", type=int, default=1)
+
+    if "type" in request.args:
+        type: str = request.args.get("type", type=str)
+        if target == 0:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 1:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 2:
+            docs1: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+            docs2: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+            docs = chain(docs1, docs2)
+        else:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("author", "==", uid)
+                .where("type", "==", type)
+                .limit(page_limit)
+                .stream()
+            )
+    else:
+        if target == 0:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 1:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+        elif target == 2:
+            docs1: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("invitees_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+            docs2: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("confirmed_dod", "array_contains", user.get("dod"))
+                .limit(page_limit)
+                .stream()
+            )
+            docs = chain(docs1, docs2)
+        else:
+            docs: list = (
+                db.collection("Scheduled-Events")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .where("author", "==", uid)
+                .limit(page_limit)
+                .stream()
+            )
+
+    events: list = []
+    for doc in docs:
+        temp: dict = doc.to_dict()
+        del temp["confirmed_dod"]
+        del temp["invitees_dod"]
+        events.append(temp)
+
+    return jsonify(events), 200
 
 
 @events.get("/get_event/<event_id>")
 @check_token
 def get_event(event_id: str) -> Response:
     """
-    Get an event from database.
+    Get the event from database.
     ---
     tags:
         - event
-    summary: Gets an event
+    summary: Gets the event
     parameters:
-        - in: path
-          name: event_id
-          schema:
-              type: string
-          required: true
         - in: header
           name: Authorization
           schema:
@@ -263,93 +487,73 @@ def get_event(event_id: str) -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    # fetch the event data from firestore
-    event_ref = db.collection("Scheduled-Events").document(event_id)
-    event: dict = event_ref.get().to_dict()
+    # get the user table
+    event_ref = db.collection("User").document(event_id).get()
+    if event_ref.exists == False:
+        return NotFound("The user was not found")
+    event: dict = event_ref.to_dict()
+    event["confirmed_dod"] = None
+    event["invitees_dod"] = None
 
-    # Only the user could get the event
     if event.get("author") != uid:
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
 
-    # event not found exception
-    if not event_ref.get().exists:
-        return NotFound("Event no longer exist")
-
     return jsonify(event), 200
 
 
-@events.get("/get_events")
+@events.post("/confirm_event/<event_id>")
 @check_token
-def get_events() -> Response:
+def confirm_event(event_id: str) -> Response:
     """
-    Get recent 10 events from database.
+    Confirm the event invitation.
     ---
     tags:
         - event
-    summary: Gets recent 10 events
+    summary: Confirm event
     parameters:
         - in: header
           name: Authorization
           schema:
             type: string
           required: true
-        - in: query
-          name: status
-          schema:
-            type: boolean
-          example: true for comming events, false for past events.
-          required: false
-        - in: query
-          name: type
-          schema:
-            type: string
-          example: mandatory, optional, or personal.
-          required: false
-        - in: query
-          name: page_limit
-          schema:
-            type: integer
-          example: default is 10.
-          required: false
     responses:
-        200:
-            content:
-                application/json:
-                    schema:
-                        type: array
-                        items:
-                            $ref: '#/components/schemas/Event'
+        201:
+            description: Confirmed event
         400:
             description: Bad request
         401:
             description: Unauthorized - the provided token is not valid
         404:
             description: NotFound
-        415:
-            description: Unsupported media type.
         500:
             description: Internal API Error
     """
-    # Check user access levels
-    # Decode token to obtain user's firebase id
+    # check tokens and get uid from token
     token: str = request.headers["Authorization"]
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
 
-    page_limit: int = request.args.get("page_limit", type=int, default=10)
+    # fetch event data from firestore
+    event_ref = db.collection("Scheduled-Events").document(event_id)
+    if not event_ref.get().exists:
+        return NotFound("The event was not found")
+    event: dict = event_ref.get().to_dict()
 
-    docs: list = (
-        db.collection("Scheduled-Events")
-        .order_by("timestamp", direction=firestore.Query.DESCENDING)
-        .where("author", "==", uid)
-        .limit(page_limit)
-        .stream()
+    if not user.get("dod") in event.get("invitees_dod"):
+        return BadRequest("User are not in the invite list")
+
+    event_ref.update(
+        {
+            "invitees_dod": firestore.ArrayRemove([user.get("dod")]),
+            "confirmed_dod": firestore.ArrayUnion([user.get("dod")]),
+        }
     )
 
-    events: list = []
-    for doc in docs:
-        events.append(doc.to_dict())
-
-    return jsonify(events), 200
+    return Response("Confirmed event", 200)

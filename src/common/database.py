@@ -3,7 +3,12 @@
     src.common.database
     ~~~~~~~~~~~~~~~~~~~
 """
-from firebase_admin import credentials, firestore, initialize_app, storage
+from firebase_admin import (
+    credentials,
+    firestore,
+    initialize_app,
+    db as realtime,
+)
 import os
 from dotenv import load_dotenv
 from mockfirestore import MockFirestore
@@ -31,9 +36,14 @@ if os.getenv("FIREBASE_PRIVATE_KEY"):
 
 cred = credentials.Certificate(FIREBASE_KEYS)
 firebase_app = initialize_app(
-    cred, {"storageBucket": "electric-eagles.appspot.com"}
+    cred,
+    {
+        "storageBucket": "electric-eagles.appspot.com",
+        "databaseURL": "https://electric-eagles-default-rtdb.firebaseio.com",
+    },
 )
 
+rtd = realtime
 if int(os.getenv("TESTING")) != 1:
     db = firestore.client()
 else:
