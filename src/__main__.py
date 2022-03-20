@@ -20,9 +20,7 @@ except ImportError:
 
 environ["FLASK_APP"] = "src.__main__:main()"
 
-cli = FlaskGroup(
-    app.run(host="0.0.0.0", port=int(environ.get("PORT", 8080)), debug=True)
-)
+cli = FlaskGroup()
 
 
 def main():
@@ -32,9 +30,7 @@ def main():
 @cli.command()
 def test():
     if test_present:
-        environ["TESTING"] = "True"
         pytest.main(["--doctest-modules", "--junitxml=junit/test-results.xml"])
-        # pytest.main(["--junitxml=junit/test-results.xml"])
     else:
         print("pytest not present")
 
