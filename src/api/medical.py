@@ -6,7 +6,7 @@
     Functions:
 """
 import csv
-from flask import Response, request
+from flask import Response, request, jsonify
 from src.api import Blueprint
 from src.common.decorators import check_token
 from src.common.database import db
@@ -76,7 +76,16 @@ def upload_medical_data() -> Response:
     subordinates: list = find_subordinates_by_dod(dod=user.get("dod"))
 
     csv_file: str = base64.b64decode(data.get("csv_file"))
-    data = pd.read_csv(BytesIO(csv_file))
-    data["dent_date"] = pd.to_datetime(data["dent_date"], format="%Y%m%d")
-    data["pha_date"] = pd.to_datetime(data["pha_date"], format="%Y%m%d")
+    csv_data = pd.read_csv(BytesIO(csv_file))
+    csv_data["dent_date"] = pd.to_datetime(
+        csv_data["dent_date"], format="%Y%m%d"
+    )
+    csv_data["pha_date"] = pd.to_datetime(csv_data["pha_date"], format="%Y%m%d")
+
+    create_medical_events(subordinates, csv_data)
+
     return Response("Success upload medical data")
+
+
+def create_medical_events(root: list, data):
+    pass

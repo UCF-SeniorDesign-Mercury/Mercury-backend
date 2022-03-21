@@ -4,6 +4,19 @@ This backend is created using Flask and is still in development and for local te
 
 ## Setup
 
+### Activating a virtual environment
+
+On macOS and Linux
+
+```
+source env/bin/activate
+```
+
+on Windows
+
+```
+.\env\Scripts\activate
+```
 
 ### Installing the packages
 
