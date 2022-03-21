@@ -487,18 +487,31 @@ def get_event(event_id: str) -> Response:
     decoded_token: dict = auth.verify_id_token(token)
     uid: str = decoded_token.get("uid")
 
-    # get the user table
-    event_ref = db.collection("User").document(event_id).get()
-    if event_ref.exists == False:
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
         return NotFound("The user was not found")
-    event: dict = event_ref.to_dict()
-    event["confirmed_dod"] = None
-    event["invitees_dod"] = None
+    user: dict = user_ref.get().to_dict()
 
-    if event.get("author") != uid:
+    # get the user table
+    event_ref = db.collection("Scheduled-Events").document(event_id).get()
+    if event_ref.exists == False:
+        return NotFound("The event was not found")
+    event: dict = event_ref.to_dict()
+
+    # only the author and the invitees can access the event
+    if (
+        event.get("author") != uid
+        or user.get("dod") not in event.get("confirmed_dod")
+        or user.get("dod") not in event.get("invitees_dod")
+    ):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
+
+    if event.get("author") != uid:
+        del event["confirmed_dod"]
+        del event["invitees_dod"]
 
     return jsonify(event), 200
 
