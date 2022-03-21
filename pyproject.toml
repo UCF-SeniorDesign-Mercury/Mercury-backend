@@ -75,6 +75,7 @@ zipp = "3.6.0"
 pandas = "^1.4.1"
 pytest-mock = "^3.7.0"
 mock-firestore = "^0.11.0"
+numpy = "^1.22.3"
 
 [tool.poetry.scripts]
 backend = "src.__main__:main"
