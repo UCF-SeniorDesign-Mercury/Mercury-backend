@@ -352,6 +352,11 @@ def get_users() -> Response:
           schema:
             type: string
           required: false
+        - in: query
+          name: uid
+          schema:
+            type: string
+          required: false
     responses:
         200:
             content:
@@ -379,7 +384,12 @@ def get_users() -> Response:
     dod: str = request.args.get("dod", type=str)
 
     # exact search
-    if "dod" in request.args:
+    if "uid" in request.args:
+        uid: str = request.args.get("uid", type=str)
+        user_docs = (
+            db.collection("User").where("uid", "==", uid).limit(1).stream()
+        )
+    elif "dod" in request.args:
         user_docs = (
             db.collection("User").where("dod", "==", dod).limit(1).stream()
         )
