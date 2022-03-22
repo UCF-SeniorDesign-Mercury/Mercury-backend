@@ -5,13 +5,13 @@
     upload_medical_data()
     Functions:
 """
-import csv
 from flask import Response, request, jsonify
 from src.api import Blueprint
 from src.common.decorators import check_token
 from src.common.database import db
-from firebase_admin import auth
-from src.common.helpers import find_subordinates_by_dod
+from firebase_admin import auth, firestore
+
+# from src.common.helpers import find_subordinates_by_dod
 from werkzeug.exceptions import NotFound, BadRequest, UnsupportedMediaType
 from io import BytesIO
 import pandas as pd
@@ -73,7 +73,8 @@ def upload_medical_data() -> Response:
     if user_ref.get().exists == False:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
-    subordinates: list = find_subordinates_by_dod(dod=user.get("dod"))
+
+    # subordinates: list = find_subordinates_by_dod(dod=user.get("dod"))
 
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file))
@@ -82,7 +83,11 @@ def upload_medical_data() -> Response:
     )
     csv_data["pha_date"] = pd.to_datetime(csv_data["pha_date"], format="%Y%m%d")
 
-    create_medical_events(subordinates, csv_data)
+    entry: list = list()
+    entry["creator_name"] = user.get("name")
+    entry["creator_uid"] = uid
+    entry["creator_dod"] = user.get("dod")
+    entry["timestamp"] = firestore.SERVER_TIMESTAMP
 
     return Response("Success upload medical data")
 
