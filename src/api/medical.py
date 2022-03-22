@@ -89,6 +89,17 @@ def upload_medical_data() -> Response:
     entry["creator_dod"] = user.get("dod")
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
 
+    for i in range(len(csv_data)):
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["unit_name"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.loc[i, "upc"]
+
     return Response("Success upload medical data")
 
 
