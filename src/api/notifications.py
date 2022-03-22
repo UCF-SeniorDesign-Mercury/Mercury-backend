@@ -25,8 +25,8 @@ def create_notification(
     type: str,
     sender: str,
     id: str,
-    receiver_dod: str,
-    receiver_uid: str,
+    receiver_dod: str = None,
+    receiver_uid: str = None,
 ):
     entry: dict = dict()
     entry["notification_type"] = notification_type

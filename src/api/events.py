@@ -9,7 +9,6 @@
         get_event()
         get_events()
 """
-from datetime import datetime
 from itertools import chain
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
@@ -88,14 +87,8 @@ def create_event() -> Response:
         return BadRequest("Missing the organizer")
 
     entry: dict = dict()
-    try:
-        entry["starttime"] = datetime.fromisoformat(data.get("starttime"))
-    except:
-        return BadRequest("The starttime formate should be datetime type")
-    try:
-        entry["endtime"] = datetime.fromisoformat(data.get("endtime"))
-    except:
-        return BadRequest("The endtime formate should be datetime type")
+    entry["starttime"] = data.get("starttime")
+    entry["endtime"] = data.get("endtime")
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
@@ -119,7 +112,7 @@ def create_event() -> Response:
                 notification_type="create event",
                 type="event invitation",
                 sender=uid,
-                id=entry["event_id"],
+                id=entry.get("event_id"),
                 receiver_dod=dod,
             )
     except:
@@ -244,21 +237,9 @@ def update_event() -> Response:
 
     # update event by given paramter
     if "starttime" in data:
-        try:
-            event_ref.update(
-                {"starttime": datetime.fromisoformat(data.get("starttime"))}
-            )
-        except:
-            return BadRequest("The starttime formate should be datetime type")
-
+        event_ref.update({"starttime": data.get("starttime")})
     if "endtime" in data:
-        try:
-            event_ref.update(
-                {"endtime": datetime.fromisoformat(data.get("endtime"))}
-            )
-        except:
-            return BadRequest("The endtime formate should be datetime type")
-
+        event_ref.update({"endtime": data.get("endtime")})
     if "period" in data and data.get("period").strip():
         event_ref.update({"period": data.get("period")})
     if "type" in data and data.get("type").strip():
