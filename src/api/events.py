@@ -483,8 +483,8 @@ def get_event(event_id: str) -> Response:
     # only the author and the invitees can access the event
     if (
         event.get("author") != uid
-        or user.get("dod") not in event.get("confirmed_dod")
-        or user.get("dod") not in event.get("invitees_dod")
+        and user.get("dod") not in event.get("confirmed_dod")
+        and user.get("dod") not in event.get("invitees_dod")
     ):
         return Unauthorized(
             "The user is not authorized to retrieve this content"
