@@ -10,9 +10,12 @@ from src.api import Blueprint
 from src.common.decorators import check_token
 from src.common.database import db
 from firebase_admin import auth, firestore
-
-# from src.common.helpers import find_subordinates_by_dod
-from werkzeug.exceptions import NotFound, BadRequest, UnsupportedMediaType
+from werkzeug.exceptions import (
+    NotFound,
+    BadRequest,
+    UnsupportedMediaType,
+    Unauthorized,
+)
 from io import BytesIO
 import pandas as pd
 import base64
@@ -43,7 +46,7 @@ def upload_medical_data() -> Response:
                     $ref: '#/components/schemas/UploadMedical'
     responses:
         201:
-            description: File uploaded
+            description: Medical records uploaded
         400:
             description: Bad request
         401:
@@ -74,34 +77,202 @@ def upload_medical_data() -> Response:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
-    # subordinates: list = find_subordinates_by_dod(dod=user.get("dod"))
-
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file))
     csv_data["dent_date"] = pd.to_datetime(
         csv_data["dent_date"], format="%Y%m%d"
     )
     csv_data["pha_date"] = pd.to_datetime(csv_data["pha_date"], format="%Y%m%d")
+    csv_data["dod"] = csv_data["dod"].astype(str)
 
-    entry: list = list()
+    entry: dict = dict()
     entry["creator_name"] = user.get("name")
     entry["creator_uid"] = uid
     entry["creator_dod"] = user.get("dod")
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
 
     for i in range(len(csv_data)):
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["unit_name"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
-        entry["upc"] = csv_data.loc[i, "upc"]
+        entry["upc"] = csv_data.iloc[i]["upc"]
+        entry["unit_name"] = csv_data.iloc[i]["un"]
+        entry["rcc"] = csv_data.iloc[i]["rcc"]
+        entry["dod"] = str(csv_data.iloc[i]["dod"])
+        entry["name"] = csv_data.iloc[i]["name"]
+        entry["mpc"] = csv_data.iloc[i]["mpc"]
+        entry["pdlc"] = csv_data.iloc[i]["pdlc"]
+        entry["mrc"] = int(csv_data.iloc[i]["mrc"])
+        entry["drc"] = int(csv_data.iloc[i]["drc"])
+        entry["dent_date"] = csv_data.iloc[i]["dent_date"]
+        entry["pha_date"] = csv_data.iloc[i]["pha_date"]
+        db.collection("Medical").document(entry["dod"]).set(entry)
 
     return Response("Success upload medical data")
 
 
-def create_medical_events(root: list, data):
-    pass
+@medical.get("/get_medical_data")
+@check_token
+def get_medical_data() -> Response:
+    """
+    Get a medical record from Firebase Storage.
+    ---
+    tags:
+        - medical
+    summary: Gets a medical data
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Medical'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # get the user table
+    user_ref = db.collection("User").document(uid).get()
+    if user_ref.exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.to_dict()
+
+    docs = (
+        db.collection("Medical")
+        .where("dod", "==", user.get("dod"))
+        .limit(1)
+        .stream()
+    )
+    res: dict = dict()
+    for doc in docs:
+        res = doc.to_dict()
+
+    return jsonify(res), 200
+
+
+@medical.delete("/delete_medical_records")
+@check_token
+def delete_medical_records() -> Response:
+    """
+    Delete medical records from Firebase Storage.
+    ---
+    tags:
+        - medical
+    summary: Deletes medical records
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+                schema:
+                    $ref: '#/components/schemas/DeleteMedical'
+    responses:
+        200:
+            description: Medical records deleted
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            type: string
+        415:
+            description: Unsupported media type.
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+    data: list = request.get_json()
+    fail_list: list = list()
+
+    if "dods" not in data:
+        return BadRequest("Missing medical record dods")
+
+    for dod in data.get("dods"):
+        medical_ref = db.collection("Medical").document(dod)
+        if not medical_ref.get().exists:
+            fail_list.append(dod)
+            continue
+        medical: dict = medical_ref.get().to_dict()
+        # Only the author, and admin have access to the data
+        if (
+            uid != medical.get("creator_uid")
+            and decoded_token.get("admin") != True
+        ):
+            return Unauthorized(
+                "The user is not authorized to retrieve this content"
+            )
+        medical_ref.delete()
+
+    if len(fail_list) > 0:
+        return jsonify(fail_list), 404
+
+    return Response(response="File deleted", status=200)
+
+
+@medical.get("/get_medical_records")
+@check_token
+def get_medical_records() -> Response:
+    """
+    Get medical records from Firebase Storage.
+    ---
+    tags:
+        - medical
+    summary: Gets medical datas
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Medical'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    docs = db.collection("Medical").where("creator_uid", "==", uid).stream()
+    res: list = list()
+    for doc in docs:
+        res.append(doc.to_dict())
+
+    return jsonify(res), 200

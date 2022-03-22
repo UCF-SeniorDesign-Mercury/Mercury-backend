@@ -29,6 +29,7 @@ poetry install
 ### Running the application
 
 ```bash
+export FLASK_ENV=development
 poetry run python -m src run --port=5000
 ```
 
