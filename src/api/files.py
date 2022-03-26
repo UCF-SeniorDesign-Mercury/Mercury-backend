@@ -108,7 +108,8 @@ def upload_file() -> Response:
     entry: dict = dict()
     entry["id"] = file_id
     entry["author"] = uid
-    entry["timestamp"] = firestore.SERVER_TIMESTAMP
+    entry["timestamp"] = [firestore.SERVER_TIMESTAMP]
+    entry["timestamp_string"] = ["File Upload"]
     entry["filetype"] = data.get("filetype")
     entry["filename"] = data.get("filename")
     entry["status"] = 1
@@ -429,7 +430,12 @@ def update_file():
         except:
             return InternalServerError("cannot update signature to storage")
 
-    file_ref.update({"timestamp": firestore.SERVER_TIMESTAMP})
+    file_ref.update(
+        {
+            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp_string": firestore.ArrayUnion(["File Update"]),
+        }
+    )
 
     return Response("File Updated", 200)
 
@@ -513,7 +519,8 @@ def review_file():
     file_ref.update(
         {
             "status": data.get("decision"),
-            "timestamp": firestore.SERVER_TIMESTAMP,
+            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp_string": firestore.ArrayUnion(["File Reviewed"]),
         }
     )
 
@@ -940,7 +947,8 @@ def give_recommendation():
         {
             "is_recommended": data.get("is_recommended"),
             "status": 2,
-            "timestamp": firestore.SERVER_TIMESTAMP,
+            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp_string": firestore.ArrayUnion(["File Recommended"]),
         }
     )
 

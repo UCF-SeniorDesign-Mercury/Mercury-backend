@@ -213,9 +213,15 @@ File:
       type: string
       required: false
     timestamp:
-      type: date-time
+      type: array
+      items:
+        type: date-time
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: [yy-MM-dd SSS HH:mm:ss]
+    timestamp_string:
+      type: array
+      items:
+        type: string
 
 UploadFile:
   type: object
@@ -274,9 +280,15 @@ UserFiles:
       required: true
       description: resubmit = 3, Approved = 4, Rejected = 5
     timestamp:
-      type: date-time
+      type: array
+      items:
+        type: date-time
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: [yy-MM-dd SSS HH:mm:ss]
+    timestamp_string:
+      type: array
+      items:
+        type: string
 
 UpdateFile:
   type: object
