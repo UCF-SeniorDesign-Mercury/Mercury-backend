@@ -431,6 +431,8 @@ def update_file():
         except:
             return InternalServerError("cannot update signature to storage")
 
+    file_ref.update({"timestamp": firestore.SERVER_TIMESTAMP})
+
     return Response("File Updated", 200)
 
 
@@ -510,7 +512,12 @@ def review_file():
     if "comment" in data:
         file_ref.update({"comment": data.get("comment")})
 
-    file_ref.update({"status": data.get("decision")})
+    file_ref.update(
+        {
+            "status": data.get("decision"),
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        }
+    )
 
     # update the file in the storage
     bucket = storage.bucket()
@@ -940,6 +947,7 @@ def give_recommendation():
             "is_recommended": data.get("is_recommended"),
             "reviewer_visible": True,
             "status": 2,
+            "timestamp": firestore.SERVER_TIMESTAMP,
         }
     )
 
