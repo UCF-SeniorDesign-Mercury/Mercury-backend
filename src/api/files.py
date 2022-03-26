@@ -14,6 +14,7 @@
         give_recommendation()
 """
 from src.common.decorators import check_token
+from datetime import datetime
 from src.common.database import db
 from src.api import Blueprint
 from firebase_admin import storage, auth, firestore
@@ -108,7 +109,7 @@ def upload_file() -> Response:
     entry: dict = dict()
     entry["id"] = file_id
     entry["author"] = uid
-    entry["timestamp"] = [firestore.SERVER_TIMESTAMP]
+    entry["timestamp"] = [datetime.now()]
     entry["timestamp_string"] = ["File Upload"]
     entry["filetype"] = data.get("filetype")
     entry["filename"] = data.get("filename")
@@ -432,7 +433,7 @@ def update_file():
 
     file_ref.update(
         {
-            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
             "timestamp_string": firestore.ArrayUnion(["File Update"]),
         }
     )
@@ -519,7 +520,7 @@ def review_file():
     file_ref.update(
         {
             "status": data.get("decision"),
-            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
             "timestamp_string": firestore.ArrayUnion(["File Reviewed"]),
         }
     )
@@ -947,7 +948,7 @@ def give_recommendation():
         {
             "is_recommended": data.get("is_recommended"),
             "status": 2,
-            "timestamp": firestore.ArrayUnion([firestore.SERVER_TIMESTAMP]),
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
             "timestamp_string": firestore.ArrayUnion(["File Recommended"]),
         }
     )
