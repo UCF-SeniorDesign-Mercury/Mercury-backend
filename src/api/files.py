@@ -114,12 +114,10 @@ def upload_file() -> Response:
     entry["status"] = 1
     entry["reviewer"] = data.get("reviewer")
     entry["comment"] = ""
-    entry["reviewer_visible"] = True
     if "recommender" in data and data.get("filetype") == "rst_request":
         if not data.get("recommender").strip():
             return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
-        entry["reviewer_visible"] = False
         # notification send to recommender
         try:
             create_notification(
@@ -769,7 +767,6 @@ def get_review_files() -> Response:
                 .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("filetype", "==", filetype)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -779,7 +776,6 @@ def get_review_files() -> Response:
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -789,7 +785,6 @@ def get_review_files() -> Response:
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
                 .where("filetype", "==", filetype)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -798,7 +793,6 @@ def get_review_files() -> Response:
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -945,7 +939,6 @@ def give_recommendation():
     file_ref.update(
         {
             "is_recommended": data.get("is_recommended"),
-            "reviewer_visible": True,
             "status": 2,
             "timestamp": firestore.SERVER_TIMESTAMP,
         }
