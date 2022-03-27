@@ -240,7 +240,7 @@ def update_event() -> Response:
         event_ref.update({"starttime": data.get("starttime")})
     if "endtime" in data:
         event_ref.update({"endtime": data.get("endtime")})
-    if "period" in data and data.get("period").strip():
+    if "period" in data:
         event_ref.update({"period": data.get("period")})
     if "type" in data and data.get("type").strip():
         event_ref.update({"type": data.get("type")})
