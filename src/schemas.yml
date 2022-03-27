@@ -72,12 +72,7 @@ UpdateEvent:
       example: mandatory
       required: false
       description: mandatory, optional, or personal
-    add_invitees:
-      type: array
-      required: false
-      items:
-        type: string
-    remove_invitees:
+    new_invitees:
       type: array
       required: false
       items:
