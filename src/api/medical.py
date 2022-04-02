@@ -145,7 +145,7 @@ def get_medical_data() -> Response:
 
     # get the user table
     user_ref = db.collection("User").document(uid).get()
-    if user_ref.exists == False:
+    if not user_ref.exists:
         return NotFound("The user was not found")
     user: dict = user_ref.to_dict()
 
