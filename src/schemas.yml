@@ -72,12 +72,7 @@ UpdateEvent:
       example: mandatory
       required: false
       description: mandatory, optional, or personal
-    add_invitees:
-      type: array
-      required: false
-      items:
-        type: string
-    remove_invitees:
+    new_invitees:
       type: array
       required: false
       items:
@@ -213,9 +208,15 @@ File:
       type: string
       required: false
     timestamp:
-      type: date-time
+      type: array
+      items:
+        type: date-time
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: [yy-MM-dd SSS HH:mm:ss]
+    timestamp_string:
+      type: array
+      items:
+        type: string
 
 UploadFile:
   type: object
@@ -274,9 +275,15 @@ UserFiles:
       required: true
       description: resubmit = 3, Approved = 4, Rejected = 5
     timestamp:
-      type: date-time
+      type: array
+      items:
+        type: date-time
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: [yy-MM-dd SSS HH:mm:ss]
+    timestamp_string:
+      type: array
+      items:
+        type: string
 
 UpdateFile:
   type: object
@@ -503,3 +510,61 @@ UploadMedical:
       formate: base64
       required: true
       description: the well format csv file
+
+Medical:
+  type: object
+  properties:
+    creator_id:
+      type: string
+      required: true
+    creator_name:
+      type: string
+      required: true
+    creator_uid:
+      type: string
+      required: true
+    dent_date:
+      type: datetime
+      required: true
+    pha_date:
+      type: datetime
+      required: true
+    dod:
+      type: string
+      required: true
+    drc:
+      type: integer
+      required: true
+    mpc:
+      type: string
+      required: true
+    mrc:
+      type: integer
+      required: true
+    name:
+      type: string
+      required: true
+    pdlc:
+      type: string
+      required: true
+    rcc:
+      type: string
+      required: true
+    timestamp:
+      type: string
+      required: true
+    unit_name:
+      type: string
+      required: true
+    upc:
+      type: string
+      required: true
+
+DeleteMedical:
+  type: object
+  properties:
+    dods:
+      type: array
+      items:
+        type: string
+      required: true

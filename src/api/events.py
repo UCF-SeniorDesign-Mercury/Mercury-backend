@@ -240,7 +240,7 @@ def update_event() -> Response:
         event_ref.update({"starttime": data.get("starttime")})
     if "endtime" in data:
         event_ref.update({"endtime": data.get("endtime")})
-    if "period" in data and data.get("period").strip():
+    if "period" in data:
         event_ref.update({"period": data.get("period")})
     if "type" in data and data.get("type").strip():
         event_ref.update({"type": data.get("type")})
@@ -251,15 +251,8 @@ def update_event() -> Response:
     if "organizer" in data and data.get("organizer").strip():
         event_ref.update({"organizer": data.get("organizer")})
 
-    if "add_invitees" in data and data.get("add_invitees"):
-        event_ref.update(
-            {"invitees_dod": firestore.ArrayUnion(data.get("add_invitees"))}
-        )
-
-    if "remove_invitees" in data and data.get("remove_invitees"):
-        event_ref.update(
-            {"invitees_dod": firestore.ArrayRemove(data.get("remove_invitees"))}
-        )
+    if "new_invitees" in data and data.get("new_invitees"):
+        event_ref.update({"invitees_dod": data.get("new_invitees")})
 
     return Response(response="Event updated", status=200)
 

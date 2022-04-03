@@ -14,6 +14,7 @@
         give_recommendation()
 """
 from src.common.decorators import check_token
+from datetime import datetime
 from src.common.database import db
 from src.api import Blueprint
 from firebase_admin import storage, auth, firestore
@@ -108,18 +109,17 @@ def upload_file() -> Response:
     entry: dict = dict()
     entry["id"] = file_id
     entry["author"] = uid
-    entry["timestamp"] = firestore.SERVER_TIMESTAMP
+    entry["timestamp"] = [datetime.now()]
+    entry["timestamp_string"] = ["File Upload"]
     entry["filetype"] = data.get("filetype")
     entry["filename"] = data.get("filename")
     entry["status"] = 1
     entry["reviewer"] = data.get("reviewer")
     entry["comment"] = ""
-    entry["reviewer_visible"] = True
     if "recommender" in data and data.get("filetype") == "rst_request":
         if not data.get("recommender").strip():
             return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
-        entry["reviewer_visible"] = False
         # notification send to recommender
         try:
             create_notification(
@@ -431,6 +431,13 @@ def update_file():
         except:
             return InternalServerError("cannot update signature to storage")
 
+    file_ref.update(
+        {
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
+            "timestamp_string": firestore.ArrayUnion(["File Update"]),
+        }
+    )
+
     return Response("File Updated", 200)
 
 
@@ -510,7 +517,13 @@ def review_file():
     if "comment" in data:
         file_ref.update({"comment": data.get("comment")})
 
-    file_ref.update({"status": data.get("decision")})
+    file_ref.update(
+        {
+            "status": data.get("decision"),
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
+            "timestamp_string": firestore.ArrayUnion(["File Reviewed"]),
+        }
+    )
 
     # update the file in the storage
     bucket = storage.bucket()
@@ -762,7 +775,6 @@ def get_review_files() -> Response:
                 .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
                 .where("filetype", "==", filetype)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -772,7 +784,6 @@ def get_review_files() -> Response:
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
                 .where("status", "==", status)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -782,7 +793,6 @@ def get_review_files() -> Response:
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
                 .where("filetype", "==", filetype)
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -791,7 +801,6 @@ def get_review_files() -> Response:
                 db.collection("Files")
                 .order_by("timestamp", direction=firestore.Query.DESCENDING)
                 .where("reviewer", "==", user.get("dod"))
-                .where("reviewer_visible", "==", True)
                 .limit(page_limit)
                 .stream()
             )
@@ -938,8 +947,9 @@ def give_recommendation():
     file_ref.update(
         {
             "is_recommended": data.get("is_recommended"),
-            "reviewer_visible": True,
             "status": 2,
+            "timestamp": firestore.ArrayUnion([datetime.now()]),
+            "timestamp_string": firestore.ArrayUnion(["File Recommended"]),
         }
     )
 

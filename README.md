@@ -4,7 +4,6 @@ This backend is created using Flask and is still in development and for local te
 
 ## Setup
 
-
 ### Installing the packages
 
 The project requires poetry (version >= 1.1.12). Installation instructions: [_link_](https://python-poetry.org/docs/#installation)
@@ -16,7 +15,7 @@ poetry install
 ### Running the application
 
 ```bash
-poetry run python -m src run --port=5000
+export FLASK_ENV=development && poetry run python -m src run --port=5000
 ```
 
 ### Running unit tests
