@@ -14,7 +14,7 @@ from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
-from src.common.database import db, rtd
+from src.common.database import db
 from src.common.decorators import check_token
 
 notifications: Blueprint = Blueprint("notifications", __name__)
@@ -27,6 +27,7 @@ def create_notification(
     id: str,
     receiver_dod: str = None,
     receiver_uid: str = None,
+    sender_name=None,
 ):
     entry: dict = dict()
     entry["notification_type"] = notification_type
@@ -35,6 +36,7 @@ def create_notification(
     entry["type"] = type
     entry["notification_id"] = str(uuid4())
     entry["id"] = id
+    entry["sender_name"] = sender_name
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
 
     if receiver_uid != None:
@@ -60,17 +62,6 @@ def create_notification(
     # update firesotre
     db.collection("Notification").document(entry.get("notification_id")).set(
         entry
-    )
-
-    # updates the firebase realtime database
-    rtd.reference("/notifications").child(entry.get("notification_id")).set(
-        {
-            "notification_type": notification_type,
-            "sender": sender,
-            "type": type,
-            "id": id,
-            "notification_id": entry["notification_id"],
-        }
     )
 
 
@@ -225,8 +216,6 @@ def read_notification(notification_id: str):
         return BadRequest("The notification has been read")
 
     notification_ref.update({"read": True})
-
-    rtd.reference("/notifications").child(notification_id).delete()
 
     return Response("Notification marked as read", 200)
 

@@ -129,6 +129,7 @@ def upload_file() -> Response:
                 sender=uid,
                 receiver_dod=data.get("recommender"),
                 receiver_uid=None,
+                sender_name=user.get("name"),
             )
         except:
             return NotFound("The recommender was not found")
@@ -142,6 +143,7 @@ def upload_file() -> Response:
                 id=file_id,
                 receiver_dod=data.get("reviewer"),
                 receiver_uid=None,
+                sender_name=user.get("name"),
             )
         except:
             return NotFound("The reviewer was not found")
@@ -385,6 +387,11 @@ def update_file():
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
 
     # Only rst_request could have recommender
     if "recommender" in data and files.get("filetype") != "rst_request":
@@ -398,6 +405,7 @@ def update_file():
                 notification_type="recommend " + " file",
                 type=data.get("filetype"),
                 sender=uid,
+                sender_name=user.get("name"),
                 id=file.get("id"),
                 receiver_uid=None,
                 receiver_dod=data.get("recommender"),
@@ -419,11 +427,6 @@ def update_file():
 
     # save pdf to firestore storage
     if "signature" in data:
-        # get the user table
-        user_ref = db.collection("User").document(uid).get()
-        if user_ref.exists == False:
-            return NotFound("The user was not found")
-        user: dict = user_ref.to_dict()
         signature_path: str = "signature/" + user.get("signature")
         try:
             blob = bucket.blob(signature_path)
@@ -541,6 +544,7 @@ def review_file():
                 id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
+                sender_name=reviewer.get("name"),
             )
         elif data.get("decision") == 4:
             create_notification(
@@ -550,6 +554,7 @@ def review_file():
                 id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
+                sender_name=reviewer.get("name"),
             )
         elif data.get("decision") == 5:
             create_notification(
@@ -559,6 +564,7 @@ def review_file():
                 id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
+                sender_name=reviewer.get("name"),
             )
     except:
         return NotFound("The author was not found")
@@ -969,6 +975,7 @@ def give_recommendation():
                 id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
+                sender_name=recommender.get("name"),
             )
         else:
             create_notification(
@@ -978,6 +985,7 @@ def give_recommendation():
                 id=data.get("file_id"),
                 receiver_uid=file.get("author"),
                 receiver_dod=None,
+                sender_name=recommender.get("name"),
             )
         # notified the reviewer to review this file
         create_notification(
@@ -987,6 +995,7 @@ def give_recommendation():
             id=data.get("file_id"),
             receiver_dod=file.get("reviewer"),
             receiver_uid=None,
+            sender_name=recommender.get("name"),
         )
     except:
         return NotFound("The reviewer was not found")

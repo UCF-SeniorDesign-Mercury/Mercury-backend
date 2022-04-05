@@ -10,9 +10,11 @@
         get_events()
 """
 from itertools import chain
+import re
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
+from datetime import datetime
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
@@ -68,6 +70,12 @@ def create_event() -> Response:
     # add more initial information
     data: dict = request.get_json()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # Exceptions
     if "title" not in data or not data.get("title").strip():
         return BadRequest("Missing the title")
@@ -87,8 +95,16 @@ def create_event() -> Response:
         return BadRequest("Missing the organizer")
 
     entry: dict = dict()
-    entry["starttime"] = data.get("starttime")
-    entry["endtime"] = data.get("endtime")
+    try:
+        st: str = datetime.fromisoformat(data.get("starttime")[:-1])
+        et: str = datetime.fromisoformat(data.get("endtime")[:-1])
+        if st > et:
+            return BadRequest("start time must be early than end time")
+        entry["starttime"] = datetime.timestamp(st)
+        entry["endtime"] = datetime.timestamp(et)
+    except:
+        return BadRequest("Wrong start time or end time formate")
+
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
@@ -109,11 +125,12 @@ def create_event() -> Response:
     try:
         for dod in data.get("invitees_dod"):
             create_notification(
-                notification_type="create event",
-                type="event invitation",
+                notification_type="invite to an event",
+                type=entry.get("type"),
                 sender=uid,
                 id=entry.get("event_id"),
                 receiver_dod=dod,
+                sender_name=user.get("name"),
             )
     except:
         return NotFound("The invitee was not found")
@@ -165,6 +182,12 @@ def delete_event(event_id: str) -> Response:
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event: dict = event_ref.get().to_dict()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event not found")
@@ -176,6 +199,29 @@ def delete_event(event_id: str) -> Response:
         )
 
     event_ref.delete()
+
+    # notify users
+    try:
+        for dod in event.get("invitees_dod"):
+            create_notification(
+                notification_type="event canceled",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+        for dod in event.get("confirmed_dod"):
+            create_notification(
+                notification_type="event canceled",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+    except:
+        return NotFound("The invitee was not found")
 
     return Response(response="Event deleted", status=200)
 
@@ -225,6 +271,12 @@ def update_event() -> Response:
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event: dict = event_ref.get().to_dict()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event was not found")
@@ -237,9 +289,11 @@ def update_event() -> Response:
 
     # update event by given paramter
     if "starttime" in data:
-        event_ref.update({"starttime": data.get("starttime")})
+        st: str = datetime.fromisoformat(data.get("starttime")[:-1])
+        event_ref.update({"starttime": datetime.timestamp(st)})
     if "endtime" in data:
-        event_ref.update({"endtime": data.get("endtime")})
+        et: str = datetime.fromisoformat(data.get("endtime")[:-1])
+        event_ref.update({"endtime": datetime.timestamp(et)})
     if "period" in data:
         event_ref.update({"period": data.get("period")})
     if "type" in data and data.get("type").strip():
@@ -253,6 +307,29 @@ def update_event() -> Response:
 
     if "new_invitees" in data and data.get("new_invitees"):
         event_ref.update({"invitees_dod": data.get("new_invitees")})
+
+    # notify users
+    try:
+        for dod in data.get("invitees_dod"):
+            create_notification(
+                notification_type="event updated",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+        for dod in data.get("confirmed_dod"):
+            create_notification(
+                notification_type="event updated",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+    except:
+        return NotFound("The invitee was not found")
 
     return Response(response="Event updated", status=200)
 
@@ -542,5 +619,18 @@ def confirm_event(event_id: str) -> Response:
             "confirmed_dod": firestore.ArrayUnion([user.get("dod")]),
         }
     )
+
+    # notify users
+    try:
+        create_notification(
+            notification_type="invite to an event",
+            type=event.get("type"),
+            sender=uid,
+            id=event.get("event_id"),
+            receiver_uid=event.get("author"),
+            sender_name=user.get("name"),
+        )
+    except:
+        return NotFound("The invitee was not found")
 
     return Response("Confirmed event", 200)
