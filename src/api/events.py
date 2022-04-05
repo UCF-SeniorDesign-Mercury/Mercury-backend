@@ -98,10 +98,10 @@ def create_event() -> Response:
     try:
         st: str = datetime.fromisoformat(data.get("starttime")[:-1])
         et: str = datetime.fromisoformat(data.get("endtime")[:-1])
-        if st > et:
-            return BadRequest("start time must be early than end time")
-        entry["starttime"] = datetime.timestamp(st)
-        entry["endtime"] = datetime.timestamp(et)
+        entry["starttime"] = st
+        entry["endtime"] = et
+        # entry["starttime"] = datetime.timestamp(st)
+        # entry["endtime"] = datetime.timestamp(et)
     except:
         return BadRequest("Wrong start time or end time formate")
 
