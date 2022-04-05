@@ -310,7 +310,7 @@ def update_event() -> Response:
 
     # notify users
     try:
-        for dod in data.get("invitees_dod"):
+        for dod in event.get("invitees_dod"):
             create_notification(
                 notification_type="event updated",
                 type=event.get("type"),
@@ -319,7 +319,7 @@ def update_event() -> Response:
                 receiver_dod=dod,
                 sender_name=user.get("name"),
             )
-        for dod in data.get("confirmed_dod"):
+        for dod in event.get("confirmed_dod"):
             create_notification(
                 notification_type="event updated",
                 type=event.get("type"),
