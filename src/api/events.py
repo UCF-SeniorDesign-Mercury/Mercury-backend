@@ -95,22 +95,12 @@ def create_event() -> Response:
         return BadRequest("Missing the organizer")
 
     entry: dict = dict()
-    try:
-        st: str = datetime.fromisoformat(data.get("starttime")[:-1])
-        et: str = datetime.fromisoformat(data.get("endtime")[:-1])
-        entry["starttime"] = st
-        entry["endtime"] = et
-        # entry["starttime"] = datetime.timestamp(st)
-        # entry["endtime"] = datetime.timestamp(et)
-    except:
-        return BadRequest("Wrong start time or end time formate")
-
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["title"] = data.get("title")
-    # entry["starttime"] = data.get("starttime")
-    # entry["endtime"] = data.get("endtime")
+    entry["starttime"] = data.get("starttime")
+    entry["endtime"] = data.get("endtime")
     entry["type"] = data.get("type")
     entry["period"] = data.get("period")
     entry["invitees_dod"] = data.get("invitees_dod")
@@ -289,11 +279,9 @@ def update_event() -> Response:
 
     # update event by given paramter
     if "starttime" in data:
-        st: str = datetime.fromisoformat(data.get("starttime")[:-1])
-        event_ref.update({"starttime": datetime.timestamp(st)})
+        event_ref.update({"starttime": data.get("starttime")})
     if "endtime" in data:
-        et: str = datetime.fromisoformat(data.get("endtime")[:-1])
-        event_ref.update({"endtime": datetime.timestamp(et)})
+        event_ref.update({"endtime": data.get("endtime")})
     if "period" in data:
         event_ref.update({"period": data.get("period")})
     if "type" in data and data.get("type").strip():
