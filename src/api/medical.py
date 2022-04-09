@@ -5,6 +5,7 @@
     upload_medical_data()
     Functions:
 """
+from uuid import uuid4
 from flask import Response, request, jsonify
 from src.api import Blueprint
 from src.common.decorators import check_token
@@ -104,6 +105,28 @@ def upload_medical_data() -> Response:
         entry["dent_date"] = csv_data.iloc[i]["dent_date"]
         entry["pha_date"] = csv_data.iloc[i]["pha_date"]
         db.collection("Medical").document(entry["dod"]).set(entry)
+        medical_event: dict = dict()
+        medical_event["author"] = uid
+        medical_event["confirmed_dod"] = []
+        medical_event["invitees_dod"] = [entry.get("dod")]
+        medical_event["description"] = "medical"
+        medical_event["event_id"] = str(uuid4())
+        medical_event["organizer"] = user.get("name")
+        medical_event["period"] = False
+        medical_event["timestamp"] = entry.get("timestamp")
+        medical_event["title"] = "medical"
+        medical_event["type"] = "Mandatory"
+        medical_event["starttime"] = entry.get("dent_date")
+        medical_event["endtime"] = entry.get("dent_date")
+        db.collection("Scheduled-Event").document(
+            medical_event.get("event_id")
+        ).set(medical_event)
+        medical_event["event_id"] = str(uuid4())
+        medical_event["starttime"] = entry.get("pha_date")
+        medical_event["endtime"] = entry.get("pha_date")
+        db.collection("Scheduled-Event").document(
+            medical_event.get("event_id")
+        ).set(medical_event)
 
     return Response("Success upload medical data")
 
