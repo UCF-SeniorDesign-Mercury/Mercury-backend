@@ -8,7 +8,7 @@
         read_notifications()
         delete_notifications()
 """
-from firebase_admin import auth, firestore
+from firebase_admin import auth, firestore, messaging
 from flask import Response, jsonify, request
 from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
@@ -16,6 +16,7 @@ from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 from src.api import Blueprint
 from src.common.database import db
 from src.common.decorators import check_token
+from src.common.notifications import send_notification
 
 notifications: Blueprint = Blueprint("notifications", __name__)
 
@@ -267,3 +268,50 @@ def delete_notification(notification_id: str):
     notification_ref.delete()
 
     return Response("Notification deleted", 200)
+
+
+@notifications.post("/send_notification")
+@check_token
+def send_notification():
+    """
+    Send a notification to a mobile device
+    ---
+    tags:
+        - notifications
+    summary: Send a notification.
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: uids
+          schema:
+            type: array
+            items: string
+          required: true
+    responses:
+        200:
+            description: Notifications sent
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        500:
+            description: Internal API Error
+    """
+    uids: list = request.args.get("uids", type=list)
+
+    if not uids:
+        raise BadRequest("No user ids provided")
+
+    users: list = db.collection("User").where("uid", "in", uids).stream()
+    tokens = list()
+
+    for user in users:
+        tokens.append(user.to_dict().get("FCMToken"))
+
+    send_notification(tokens, data=request.data)
+
+    return Response("Notifications sent", 200)
