@@ -111,8 +111,8 @@ def upload_medical_data() -> Response:
         # create dental event
         medical_event: dict = dict()
         medical_event["author"] = uid
-        medical_event["confirmed_dod"] = []
-        medical_event["invitees_dod"] = [entry.get("dod")]
+        medical_event["confirmed_dod"] = [entry.get("dod")]
+        medical_event["invitees_dod"] = []
         medical_event["description"] = "medical"
         medical_event["event_id"] = str(uuid4())
         medical_event["organizer"] = user.get("name")
@@ -126,7 +126,7 @@ def upload_medical_data() -> Response:
         medical_event["endtime"] = entry.get("dent_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
-        db.collection("Scheduled-Event").document(
+        db.collection("Scheduled-Events").document(
             medical_event.get("event_id")
         ).set(medical_event)
 
@@ -138,7 +138,7 @@ def upload_medical_data() -> Response:
         medical_event["endtime"] = entry.get("pha_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
-        db.collection("Scheduled-Event").document(
+        db.collection("Scheduled-Events").document(
             medical_event.get("event_id")
         ).set(medical_event)
 
