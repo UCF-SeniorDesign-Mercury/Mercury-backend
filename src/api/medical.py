@@ -145,7 +145,7 @@ def upload_medical_data() -> Response:
         # get to_user uid.
         receiver_docs = (
             db.collection("User")
-            .where("dod", "==", entry.gte("dod"))
+            .where("dod", "==", entry.get("dod"))
             .limit(1)
             .stream()
         )

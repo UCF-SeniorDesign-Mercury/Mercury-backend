@@ -1,6 +1,7 @@
 from logging.config import dictConfig
 from threading import Timer
 from dateutil import parser
+import datetime as dt
 from datetime import datetime
 from uuid import uuid4
 from firebase_admin import messaging
@@ -25,18 +26,19 @@ def add_scheduled_notification(time: datetime, tokens: list, data: dict) -> str:
     return id
 
 
-def add_medical_notifications(time: datetime, tokens: list, data: dict) -> list:
+def add_medical_notifications(
+    appointment_time: datetime, tokens: list, data: dict
+) -> list:
     ids = list()
     time_periods = [270, 180, 1]
 
-    appointment_time = parser.parse(time)
     for i in range(3):
         id = str(uuid4())
         ids.append(id)
         time = (
             appointment_time
             - datetime.now()
-            + datetime.timedelta(days=time_periods[i])
+            + dt.timedelta(days=time_periods[i])
         )
 
         timers[id] = Timer(time, send_notification, args=(tokens, data))
