@@ -98,13 +98,13 @@ Event:
       required: true
       example: Coffe time
     starttime:
-      type: timestamp
+      type: string
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: mm-dd-yyyyThh:mm:ss.SSSZ (iso formate)
     endtime:
-      type: timestamp
+      type: string
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: mm-dd-yyyyThh:mm:ss.SSSZ (iso formate)
     type:
       type: string
       required: true

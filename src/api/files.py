@@ -402,7 +402,7 @@ def update_file():
         try:
             # notification send to recommender
             create_notification(
-                notification_type="recommend " + " file",
+                notification_type="recommend file",
                 type=data.get("filetype"),
                 sender=uid,
                 sender_name=user.get("name"),
@@ -969,7 +969,7 @@ def give_recommendation():
     try:
         if data.get("is_recommended"):
             create_notification(
-                notification_type="positive recommendation",
+                notification_type="positive file recommendation",
                 type=file.get("filetype"),
                 sender=uid,
                 id=data.get("file_id"),
@@ -979,7 +979,7 @@ def give_recommendation():
             )
         else:
             create_notification(
-                notification_type="negative recommendation",
+                notification_type="negative file recommendation",
                 type=file.get("filetype"),
                 sender=uid,
                 id=data.get("file_id"),

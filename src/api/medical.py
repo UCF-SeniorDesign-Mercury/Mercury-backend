@@ -21,6 +21,8 @@ from io import BytesIO
 import pandas as pd
 import base64
 
+from src.common.notifications import add_medical_notifications
+
 
 medical: Blueprint = Blueprint("medical", __name__)
 
@@ -105,6 +107,8 @@ def upload_medical_data() -> Response:
         entry["dent_date"] = csv_data.iloc[i]["dent_date"]
         entry["pha_date"] = csv_data.iloc[i]["pha_date"]
         db.collection("Medical").document(entry["dod"]).set(entry)
+
+        # create dental event
         medical_event: dict = dict()
         medical_event["author"] = uid
         medical_event["confirmed_dod"] = []
@@ -116,17 +120,55 @@ def upload_medical_data() -> Response:
         medical_event["timestamp"] = entry.get("timestamp")
         medical_event["title"] = "medical"
         medical_event["type"] = "Mandatory"
-        medical_event["starttime"] = entry.get("dent_date")
-        medical_event["endtime"] = entry.get("dent_date")
+        medical_event["starttime"] = entry.get("dent_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        medical_event["endtime"] = entry.get("dent_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
         db.collection("Scheduled-Event").document(
             medical_event.get("event_id")
         ).set(medical_event)
+
+        # create pha event
         medical_event["event_id"] = str(uuid4())
-        medical_event["starttime"] = entry.get("pha_date")
-        medical_event["endtime"] = entry.get("pha_date")
+        medical_event["starttime"] = entry.get("pha_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        medical_event["endtime"] = entry.get("pha_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
         db.collection("Scheduled-Event").document(
             medical_event.get("event_id")
         ).set(medical_event)
+
+        # get to_user uid.
+        receiver_docs = (
+            db.collection("User")
+            .where("dod", "==", entry.gte("dod"))
+            .limit(1)
+            .stream()
+        )
+
+        receiver_list: list = []
+        for doc in receiver_docs:
+            receiver_list.append(doc.to_dict())
+
+        receiver: dict = receiver_list[0]
+
+        fcm_tokens: list = [receiver.get("FCMToken")]
+
+        add_medical_notifications(
+            entry.get("dent_date"),
+            fcm_tokens,
+            {"title": "dent alert", "body": "dental appointment alert"},
+        )
+
+        add_medical_notifications(
+            entry.get("pha_date"),
+            fcm_tokens,
+            {"title": "pha alert", "body": "pha appointment alert"},
+        )
 
     return Response("Success upload medical data")
 

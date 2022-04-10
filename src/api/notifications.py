@@ -8,6 +8,7 @@
         read_notifications()
         delete_notifications()
 """
+from datetime import datetime
 from firebase_admin import auth, firestore, messaging
 from flask import Response, jsonify, request
 from uuid import uuid4
@@ -16,7 +17,10 @@ from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 from src.api import Blueprint
 from src.common.database import db
 from src.common.decorators import check_token
-from src.common.notifications import send_notification
+from src.common.notifications import (
+    add_scheduled_notification,
+    send_notification,
+)
 
 notifications: Blueprint = Blueprint("notifications", __name__)
 
@@ -28,8 +32,9 @@ def create_notification(
     id: str,
     receiver_dod: str = None,
     receiver_uid: str = None,
-    sender_name=None,
+    sender_name: str = None,
 ):
+    receiver: dict = dict()
     entry: dict = dict()
     entry["notification_type"] = notification_type
     entry["sender"] = sender
@@ -42,6 +47,11 @@ def create_notification(
 
     if receiver_uid != None:
         entry["receiver"] = receiver_uid
+        # get the receiver table
+        receiver_ref = db.collection("User").document(receiver_uid).get()
+        if receiver_ref.exists == False:
+            return NotFound("The user was not found")
+        receiver = receiver_ref.to_dict()
     else:
         # get to_user uid.
         receiver_docs = (
@@ -58,12 +68,20 @@ def create_notification(
         if not receiver_list:
             raise NotFound("The reviewer ", receiver_dod, " was not found")
 
-        entry["receiver"] = receiver_list[0].get("uid")
+        receiver = receiver_list[0]
+        entry["receiver"] = receiver.get("uid")
 
     # update firesotre
     db.collection("Notification").document(entry.get("notification_id")).set(
         entry
     )
+
+    # create push notification for mobile
+    if receiver.get("token") and "file" in notification_type:
+        data: dict = dict()
+        data["title"] = notification_type
+        data["body"] = sender_name + notification_type
+        send_notification([receiver.get("FCMToken")], data)
 
 
 @notifications.get("/get_notifications")
