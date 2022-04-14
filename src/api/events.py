@@ -18,6 +18,7 @@ from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
+from src.api import notifications
 from src.api.notifications import create_notification
 from src.common.database import db
 from src.common.decorators import check_token
@@ -249,6 +250,13 @@ def delete_event(event_id: str) -> Response:
 
     if "timer_id" in event:
         cancel_scheduled_notification(event.get("timer_id"))
+        
+    # delete the notifications about this event.
+    notifications_docs = (
+        db.collection("Notification").where("id", "==", event).stream()
+    )
+    for notification_doc in notifications_docs:
+        notification_doc.reference.delete()
 
     event_ref.delete()
     return Response(response="Event deleted", status=200)
