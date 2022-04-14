@@ -3,12 +3,7 @@
     src.common.database
     ~~~~~~~~~~~~~~~~~~~
 """
-from firebase_admin import (
-    credentials,
-    firestore,
-    initialize_app,
-    db as realtime,
-)
+from firebase_admin import credentials, firestore, initialize_app
 import os
 from dotenv import load_dotenv
 from mockfirestore import MockFirestore
@@ -43,7 +38,6 @@ firebase_app = initialize_app(
     },
 )
 
-rtd = realtime
 if int(os.getenv("TESTING")) != 1:
     db = firestore.client()
 else:

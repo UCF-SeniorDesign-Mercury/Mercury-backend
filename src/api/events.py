@@ -9,7 +9,9 @@
         get_event()
         get_events()
 """
+from datetime import datetime
 from itertools import chain
+from dateutil import parser
 from firebase_admin import auth, firestore
 from flask import Response, jsonify, request
 from uuid import uuid4
@@ -19,7 +21,11 @@ from src.api import Blueprint
 from src.api import notifications
 from src.api.notifications import create_notification
 from src.common.database import db
-from src.common.decorators import admin_only, check_token
+from src.common.decorators import check_token
+from src.common.notifications import (
+    add_scheduled_notification,
+    cancel_scheduled_notification,
+)
 
 events: Blueprint = Blueprint("events", __name__)
 
@@ -69,6 +75,12 @@ def create_event() -> Response:
     # add more initial information
     data: dict = request.get_json()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # Exceptions
     if "title" not in data or not data.get("title").strip():
         return BadRequest("Missing the title")
@@ -88,14 +100,12 @@ def create_event() -> Response:
         return BadRequest("Missing the organizer")
 
     entry: dict = dict()
-    entry["starttime"] = data.get("starttime")
-    entry["endtime"] = data.get("endtime")
     entry["author"] = uid
     entry["event_id"] = str(uuid4())
     entry["timestamp"] = firestore.SERVER_TIMESTAMP
     entry["title"] = data.get("title")
-    # entry["starttime"] = data.get("starttime")
-    # entry["endtime"] = data.get("endtime")
+    entry["starttime"] = data.get("starttime")
+    entry["endtime"] = data.get("endtime")
     entry["type"] = data.get("type")
     entry["period"] = data.get("period")
     entry["invitees_dod"] = data.get("invitees_dod")
@@ -108,16 +118,48 @@ def create_event() -> Response:
 
     # notify users
     try:
+        fcm_tokens: list = list()
         for dod in data.get("invitees_dod"):
+            # get to_user uid.
+            receiver_docs = (
+                db.collection("User").where("dod", "==", dod).limit(1).stream()
+            )
+
+            receiver_list: list = []
+            for doc in receiver_docs:
+                receiver_list.append(doc.to_dict())
+
+            receiver: dict = receiver_list[0]
+
+            if receiver.get("FCMToken"):
+                fcm_tokens.append(receiver.get("FCMToken"))
+
             create_notification(
-                notification_type="create event",
-                type="event invitation",
+                notification_type="invite to an event",
+                type=entry.get("type"),
                 sender=uid,
                 id=entry.get("event_id"),
                 receiver_dod=dod,
+                sender_name=user.get("name"),
             )
+
     except:
         return NotFound("The invitee was not found")
+
+    if fcm_tokens:
+        timer_id: str = add_scheduled_notification(
+            data.get("starttime"),
+            fcm_tokens,
+            {
+                "title": "event invitation",
+                "body": (
+                    user.get("name") + " invite you to " + entry.get("type")
+                ),
+            },
+        )
+        db.collection("Scheduled-Events").document(
+            entry.get("event_id")
+        ).update({"timer_id": timer_id})
 
     # return Response 201 for successfully creating a new resource
     return Response(response="Event added", status=201)
@@ -166,6 +208,12 @@ def delete_event(event_id: str) -> Response:
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event: dict = event_ref.get().to_dict()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event not found")
@@ -176,6 +224,33 @@ def delete_event(event_id: str) -> Response:
             "The user is not authorized to retrieve this content", 401
         )
 
+    # notify users
+    try:
+        for dod in event.get("invitees_dod"):
+            create_notification(
+                notification_type="event canceled",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+
+        for dod in event.get("confirmed_dod"):
+            create_notification(
+                notification_type="event canceled",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+    except:
+        return NotFound("The invitee was not found")
+
+    if "timer_id" in event:
+        cancel_scheduled_notification(event.get("timer_id"))
+        
     # delete the notifications about this event.
     notifications_docs = (
         db.collection("Notification").where("id", "==", event).stream()
@@ -184,7 +259,6 @@ def delete_event(event_id: str) -> Response:
         notification_doc.reference.delete()
 
     event_ref.delete()
-
     return Response(response="Event deleted", status=200)
 
 
@@ -233,6 +307,12 @@ def update_event() -> Response:
     event_ref = db.collection("Scheduled-Events").document(event_id)
     event: dict = event_ref.get().to_dict()
 
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
     # if event does not exists
     if not event_ref.get().exists:
         return NotFound("The event was not found")
@@ -261,6 +341,75 @@ def update_event() -> Response:
 
     if "new_invitees" in data and data.get("new_invitees"):
         event_ref.update({"invitees_dod": data.get("new_invitees")})
+
+    # fetch event data from firestore
+    event_ref = db.collection("Scheduled-Events").document(event_id)
+    event: dict = event_ref.get().to_dict()
+    # notify users
+    try:
+        fcm_tokens: list = list()
+        for dod in event.get("invitees_dod"):
+            # get to_user uid.
+            receiver_docs = (
+                db.collection("User").where("dod", "==", dod).limit(1).stream()
+            )
+
+            receiver_list: list = []
+            for doc in receiver_docs:
+                receiver_list.append(doc.to_dict())
+
+            receiver: dict = receiver_list[0]
+
+            if receiver.get("FCMToken"):
+                fcm_tokens.append(receiver.get("FCMToken"))
+            create_notification(
+                notification_type="event updated",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+        for dod in event.get("confirmed_dod"):
+            # get to_user uid.
+            receiver_docs = (
+                db.collection("User").where("dod", "==", dod).limit(1).stream()
+            )
+
+            receiver_list: list = []
+            for doc in receiver_docs:
+                receiver_list.append(doc.to_dict())
+
+            receiver: dict = receiver_list[0]
+
+            if receiver.get("FCMToken"):
+                fcm_tokens.append(receiver.get("FCMToken"))
+            create_notification(
+                notification_type="event updated",
+                type=event.get("type"),
+                sender=uid,
+                id=event.get("event_id"),
+                receiver_dod=dod,
+                sender_name=user.get("name"),
+            )
+    except:
+        return NotFound("The invitee was not found")
+
+    if "timer_id" in event:
+        cancel_scheduled_notification(event.get("timer_id"))
+        timer_id: str = add_scheduled_notification(
+            event.get("starttime"),
+            fcm_tokens,
+            {
+                "title": "event invitation",
+                "body": (
+                    user.get("name") + " invite you to " + event.get("type")
+                ),
+            },
+        )
+        db.collection("Scheduled-Events").document(
+            event.get("event_id")
+        ).update({"timer_id": timer_id})
 
     return Response(response="Event updated", status=200)
 
@@ -550,5 +699,18 @@ def confirm_event(event_id: str) -> Response:
             "confirmed_dod": firestore.ArrayUnion([user.get("dod")]),
         }
     )
+
+    # notify users
+    try:
+        create_notification(
+            notification_type="confirm event",
+            type=event.get("type"),
+            sender=uid,
+            id=event.get("event_id"),
+            receiver_uid=event.get("author"),
+            sender_name=user.get("name"),
+        )
+    except:
+        return NotFound("The invitee was not found")
 
     return Response("Confirmed event", 200)

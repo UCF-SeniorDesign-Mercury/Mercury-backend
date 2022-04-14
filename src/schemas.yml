@@ -98,13 +98,13 @@ Event:
       required: true
       example: Coffe time
     starttime:
-      type: timestamp
+      type: string
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: mm-dd-yyyyThh:mm:ss.SSSZ (iso formate)
     endtime:
-      type: timestamp
+      type: string
       required: true
-      example: yy-MM-dd SSS HH:mm:ss
+      example: mm-dd-yyyyThh:mm:ss.SSSZ (iso formate)
     type:
       type: string
       required: true
@@ -479,6 +479,9 @@ Notification:
       required: true
       description: review file, recommend file, file status update
     sender:
+      type: string
+      required: true
+    sender_name:
       type: string
       required: true
     receiver:
