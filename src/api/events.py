@@ -16,6 +16,7 @@ from uuid import uuid4
 from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 
 from src.api import Blueprint
+from src.api import notifications
 from src.api.notifications import create_notification
 from src.common.database import db
 from src.common.decorators import admin_only, check_token
@@ -174,6 +175,13 @@ def delete_event(event_id: str) -> Response:
         return Response(
             "The user is not authorized to retrieve this content", 401
         )
+
+    # delete the notifications about this event.
+    notifications_docs = (
+        db.collection("Notification").where("id", "==", event).stream()
+    )
+    for notification_doc in notifications_docs:
+        notification_doc.reference.delete()
 
     event_ref.delete()
 
