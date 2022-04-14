@@ -76,7 +76,7 @@ def register_user() -> Response:
     entry["branch"] = user_data.get("branch")
     entry["superior"] = user_data.get("superior")
     entry["level"] = user_data.get("level")
-
+    entry["FCMToken"] = user_data.get("FCMToken")
     # if user upload the profile picture
     if "profile_picture" in user_data:
         bucket = storage.bucket()
@@ -97,7 +97,9 @@ def register_user() -> Response:
     if "phone" in user_data:
         entry["phone"] = user_data.get("phone")
 
-    if user_data.get("grade")[0:1] == "O" or user_data.get("grade")[0:1] == "W":
+    if user_data.get("grade") and (
+        user_data.get("grade")[0:1] == "O" or user_data.get("grade")[0:1] == "W"
+    ):
         entry["officer"] = True
     else:
         entry["officer"] = False
