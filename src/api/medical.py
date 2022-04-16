@@ -131,7 +131,7 @@ def upload_medical_data() -> Response:
         ).set(medical_event)
 
         # create pha event
-        medical_event["description"] = "pysical"
+        medical_event["description"] = "physical"
         medical_event["event_id"] = str(uuid4())
         medical_event["starttime"] = entry.get("pha_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
