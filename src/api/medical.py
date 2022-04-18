@@ -113,12 +113,12 @@ def upload_medical_data() -> Response:
         medical_event["author"] = uid
         medical_event["confirmed_dod"] = [entry.get("dod")]
         medical_event["invitees_dod"] = []
-        medical_event["description"] = "dental"
+        medical_event["description"] = "Dental Readiness Examination Due"
         medical_event["event_id"] = str(uuid4())
         medical_event["organizer"] = user.get("name")
         medical_event["period"] = False
         medical_event["timestamp"] = entry.get("timestamp")
-        medical_event["title"] = "medical"
+        medical_event["title"] = "Dental Exam Due"
         medical_event["type"] = "Mandatory"
         medical_event["starttime"] = entry.get("dent_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
@@ -131,7 +131,8 @@ def upload_medical_data() -> Response:
         ).set(medical_event)
 
         # create pha event
-        medical_event["description"] = "physical"
+        medical_event["title"] = "Physical Exam Due"
+        medical_event["description"] = "Physical Readiness Examination Due"
         medical_event["event_id"] = str(uuid4())
         medical_event["starttime"] = entry.get("pha_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
