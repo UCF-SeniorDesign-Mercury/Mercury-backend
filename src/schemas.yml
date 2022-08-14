@@ -36,6 +36,14 @@ CreateEvent:
       type: string
       required: true
       example: Drink coffee with your teammates
+    weekly:
+      type: boolean
+      required: true
+      example: true
+    yearly:
+      type: boolean
+      required: true
+      example: true
 
 UpdateEvent:
   type: object
