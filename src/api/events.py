@@ -112,6 +112,8 @@ def create_event() -> Response:
     entry["confirmed_dod"] = []
     entry["organizer"] = data.get("organizer")
     entry["description"] = data.get("description")
+    entry["weekly"] = data.get("weekly")
+    entry["yearly"] = data.get("yearly")
 
     # write to Firestore DB
     db.collection("Scheduled-Events").document(entry.get("event_id")).set(entry)
