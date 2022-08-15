@@ -340,10 +340,6 @@ def update_event() -> Response:
         event_ref.update({"description": data.get("description")})
     if "organizer" in data and data.get("organizer").strip():
         event_ref.update({"organizer": data.get("organizer")})
-    if "weekly" in data and data.get("weekly").strip():
-        event_ref.update({"weekly": data.get("weekly")})
-    if "yearly" in data and data.get("yearly").strip():
-        event_ref.update({"yearly": data.get("yearly")})
 
     if "new_invitees" in data and data.get("new_invitees"):
         event_ref.update({"invitees_dod": data.get("new_invitees")})
