@@ -97,11 +97,12 @@ def upload_file() -> Response:
             "Unsupported file. The endpoint only accepts rst_request and 1380_form"
         )
 
-    if user.get("signature") == None and data.get("signature") == None:
-        return BadRequest("Missing the signature")
+    if data.get("filetype") != "dental_form":
+        if user.get("signature") == None and data.get("signature") == None:
+            return BadRequest("Missing the signature")
 
-    if "reviewer" not in data or not data.get("reviewer").strip():
-        return BadRequest("Missing the reviewer")
+        if "reviewer" not in data or not data.get("reviewer").strip():
+            return BadRequest("Missing the reviewer")
 
     if "filename" not in data or not data.get("filename").strip():
         return BadRequest("Missing the filename")
