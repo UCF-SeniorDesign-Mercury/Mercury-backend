@@ -91,6 +91,7 @@ def upload_file() -> Response:
     if (
         data.get("filetype") != "rst_request"
         and data.get("filetype") != "1380_form"
+        and data.get("filetype") != "dental_form"
     ):
         return UnsupportedMediaType(
             "Unsupported file. The endpoint only accepts rst_request and 1380_form"
