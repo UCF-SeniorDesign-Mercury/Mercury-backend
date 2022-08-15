@@ -85,6 +85,12 @@ UpdateEvent:
       required: false
       items:
         type: string
+    weekly:
+      type: boolean
+      example: false
+    yearly:
+      type: boolean
+      example: false
 
 Event:
   type: object
