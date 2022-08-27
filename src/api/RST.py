@@ -21,12 +21,12 @@ from io import BytesIO
 import pandas as pd
 import base64
 
-from src.common.notifications import add_medical_notifications
+from src.common.notifications import add_scheduled_notifications
 
 RST: Blueprint = Blueprint("RST", __name__)
 
 
-@RST.post("/upload_medical_data")
+@RST.post("/upload_RST_data")
 @check_token
 def upload_RST_data() -> Response:
     """
@@ -45,10 +45,10 @@ def upload_RST_data() -> Response:
         content:
             application/json:
                 schema:
-                    $ref: '#/components/schemas/UploadMedical'
+                    $ref:
     responses:
         201:
-            description: Medical records uploaded
+            description: RST records uploaded
         400:
             description: Bad request
         401:
@@ -115,4 +115,29 @@ def upload_RST_data() -> Response:
             date_split[2] + "-" + month_str + "-" + dates[1] + "T00:00:00.000Z"
         )
 
-        db.collection("Scheduled-Events").document(entry["dod"]).set(entry)
+        db.collection("Scheduled-Events").document(entry.get("event_id")).set(
+            entry
+        )
+
+        receiver_docs = (
+            db.collection("User")
+            .where("dod", "==", user.get("dod"))
+            .limit(1)
+            .stream()
+        )
+        receiver_list: list = []
+
+        for doc in receiver_docs:
+            receiver_list.append(doc.to_dict())
+
+        receiver: dict = receiver_list[0]
+        fcm_tokens: list = [receiver.get("FCMToken")]
+
+        # add_scheduled_notifications(
+        #     entry.get("starttime"),
+        #     fcm_tokens,
+        #     {"title": "event alert", "body": "training drills: " + entry.get("type")}
+        # )
+
+        return Response("Successfully uploaded RST Training Dates")
+
