@@ -23,10 +23,10 @@ import base64
 
 from src.common.notifications import add_scheduled_notifications
 
-RST: Blueprint = Blueprint("RST", __name__)
+rst: Blueprint = Blueprint("rst", __name__)
 
 
-@RST.post("/upload_RST_data")
+@rst.post("/upload_rst_data")
 @check_token
 def upload_RST_data() -> Response:
     """
@@ -140,4 +140,3 @@ def upload_RST_data() -> Response:
         # )
 
         return Response("Successfully uploaded RST Training Dates")
-
