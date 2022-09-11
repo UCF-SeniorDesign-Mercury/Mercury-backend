@@ -9,8 +9,8 @@ from src.api.events import events
 from src.api.files import files
 from src.api.users import users
 from src.api.medical import medical
-from src.api.rst import rst
 from src.api.notifications import notifications
+from src.api.rst import rst
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flasgger import Swagger

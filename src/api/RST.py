@@ -5,6 +5,7 @@
     Functions:
 """
 
+import datetime
 from uuid import uuid4
 from flask import Response, request, jsonify
 from src.api import Blueprint
@@ -21,14 +22,12 @@ from io import BytesIO
 import pandas as pd
 import base64
 
-from src.common.notifications import add_scheduled_notifications
-
 rst: Blueprint = Blueprint("rst", __name__)
 
 
 @rst.post("/upload_rst_data")
 @check_token
-def upload_RST_data() -> Response:
+def upload_rst_data() -> Response:
     """
     Upload a excel file that has RST Battle Assembly dates
     ---
