@@ -137,5 +137,5 @@ def upload_rst_data() -> Response:
         #     fcm_tokens,
         #     {"title": "event alert", "body": "training drills: " + entry.get("type")}
         # )
-
-        return Response("Successfully uploaded RST Training Dates")
+    
+    return Response("Successfully uploaded RST Training Dates")
