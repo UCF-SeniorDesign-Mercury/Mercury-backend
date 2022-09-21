@@ -88,6 +88,7 @@ def upload_rst_data() -> Response:
         entry["confirmed_dod"] = []
         entry["description"] = "Training Drills"
         entry["event_id"] = str(uuid4())
+        entry["invitees_dod"] = []
         entry["organizer"] = user.get("name")
         entry["period"] = True
         entry["timestamp"] = firestore.SERVER_TIMESTAMP
