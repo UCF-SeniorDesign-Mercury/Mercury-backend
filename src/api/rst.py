@@ -5,7 +5,7 @@
     Functions:
 """
 
-import datetime
+from datetime import datetime
 from uuid import uuid4
 from flask import Response, request, jsonify
 from src.api import Blueprint
