@@ -422,6 +422,12 @@ User:
     branch:
       type: string
       required: true
+    address:
+      type: string
+      required: true
+    unit:
+      type: string
+      required: true
     officer:
       type: boolean
       required: true

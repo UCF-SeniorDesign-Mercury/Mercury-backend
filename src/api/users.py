@@ -69,6 +69,8 @@ def register_user() -> Response:
     entry["uid"] = uid
     entry["name"] = user_data.get("name")
     entry["email"] = decoded_token.get("email")
+    entry["address"] = decoded_token.get("address")
+    entry["unit"] = decoded_token.get("unit")
     entry["user_status"] = 1
     entry["dod"] = user_data.get("dod")
     entry["grade"] = user_data.get("grade")
@@ -165,6 +167,12 @@ def update_user() -> Response:
 
     if "branch" in data:
         user_ref.update({"branch": data.get("branch")})
+
+    if "address" in data:
+        user_ref.update({"address": data.get("address")})
+
+    if "unit" in data:
+        user_ref.update({"unit": data.get("unit")})
 
     if "superior" in data:
         user_ref.update({"superior": data.get("superior")})
