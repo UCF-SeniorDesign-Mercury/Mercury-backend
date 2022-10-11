@@ -114,6 +114,7 @@ def upload_file() -> Response:
     entry["timestamp"] = [datetime.now()]
     entry["timestamp_string"] = ["File Upload"]
     entry["filetype"] = data.get("filetype")
+    entry["requestType"] = data.get("requestType")
     entry["filename"] = data.get("filename")
     entry["status"] = 1
     entry["reviewer"] = data.get("reviewer")
