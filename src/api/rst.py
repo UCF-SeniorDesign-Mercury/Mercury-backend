@@ -107,7 +107,7 @@ def upload_rst_data() -> Response:
         datetime_object = datetime.strptime(date_split[1], "%B")
         month_int = datetime_object.month
         
-         if month_int < 10:
+        if month_int < 10:
             month_str = "0" + str(month_int)
 
         else:
