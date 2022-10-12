@@ -114,10 +114,10 @@ def upload_rst_data() -> Response:
             month_str = str(month_int)
 
         entry["starttime"] = (
-            date_split[2] + "-" + month_str + "-" + dates[0] + "T00:00:00.000Z"
+            date_split[2] + "-" + month_str + "-" + dates[0] + "T12:00:00.000Z"
         )
         entry["endtime"] = (
-            date_split[2] + "-" + month_str + "-" + dates[1] + "T00:00:00.000Z"
+            date_split[2] + "-" + month_str + "-" + dates[1] + "T12:00:00.000Z"
         )
 
         db.collection("Scheduled-Events").document(entry.get("event_id")).set(
