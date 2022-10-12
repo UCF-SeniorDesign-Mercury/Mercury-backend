@@ -106,7 +106,12 @@ def upload_rst_data() -> Response:
 
         datetime_object = datetime.strptime(date_split[1], "%B")
         month_int = datetime_object.month
-        month_str = str(month_int)
+        
+         if month_int < 10:
+            month_str = "0" + str(month_int)
+
+        else:
+            month_str = str(month_str)
 
         entry["starttime"] = (
             date_split[2] + "-" + month_str + "-" + dates[0] + "T00:00:00.000Z"
@@ -132,11 +137,5 @@ def upload_rst_data() -> Response:
 
         receiver: dict = receiver_list[0]
         fcm_tokens: list = [receiver.get("FCMToken")]
-
-        # add_scheduled_notifications(
-        #     entry.get("starttime"),
-        #     fcm_tokens,
-        #     {"title": "event alert", "body": "training drills: " + entry.get("type")}
-        # )
-    
+   
     return Response("Successfully uploaded RST Training Dates")
