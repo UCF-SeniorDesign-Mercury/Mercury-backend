@@ -261,6 +261,10 @@ UserFiles:
       type: string
       example: 1380_Blank.pdf
       required: true
+    requestType:
+      type: string
+      example: DA 1380-MDR
+      required: true
     filename:
       type: string
       example: 1380_form
