@@ -435,9 +435,21 @@ User:
     officer:
       type: boolean
       required: true
+    commander:
+      type: boolean
+      required: true
+    flight_status:
+      type: boolean
+      required: true
+    mos:
+      type: string
+      required: true
+    unit_name:
+      type: string
+      required: true
     level:
       type: integer
-      required: true
+      required: false
     description:
       type: string
       required: false

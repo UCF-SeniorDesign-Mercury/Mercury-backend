@@ -10,14 +10,19 @@
 """
 from flask import Response, request
 from src.common.decorators import admin_only, check_token
-from werkzeug.exceptions import BadRequest, NotFound
-from firebase_admin import storage, auth
+from werkzeug.exceptions import BadRequest, NotFound, UnsupportedMediaType
+from firebase_admin import storage, auth, firestore
 from uuid import uuid4
 from flask import jsonify
 
 from src.common.database import db
 from src.api import Blueprint
 from src.common.helpers import find_subordinates_by_dod
+import base64
+from io import BytesIO
+import pandas as pd
+
+from src.common.notifications import add_medical_notifications
 
 users: Blueprint = Blueprint("users", __name__)
 
@@ -110,6 +115,148 @@ def register_user() -> Response:
     db.collection("User").document(uid).set(entry)
 
     return Response("User registered", 201)
+
+
+@users.put("/upload_csv_users")
+@check_token
+def upload_csv_users() -> Response:
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+    data: dict = request.get_json()
+
+    # exceptions
+    if "filename" in data and data.get("filename") == "":
+        return BadRequest("Missing the filename")
+    if data["filename"][-4:] != ".csv":
+        return UnsupportedMediaType("The endpoint only accept .csv file")
+    if "csv_file" in data and data.get("csv_file") == "":
+        return BadRequest("Missing the csv_file")
+
+    # check if the user exists
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
+    csv_file: str = base64.b64decode(data.get("csv_file"))
+    csv_data = pd.read_csv(BytesIO(csv_file))
+
+    csv_data["DENT_DATE"] = pd.to_datetime(
+        csv_data["DENT_DATE"], format="%Y%m%d"
+    )
+    csv_data["PHA_DATE"] = pd.to_datetime(csv_data["PHA_DATE"], format="%Y%m%d")
+
+    user_entry: dict = dict()
+    user_entry["timestamp"] = firestore.SERVER_TIMESTAMP
+
+    medical_entry: dict = dict()
+    medical_entry["creator_name"] = user.get("name")
+    medical_entry["creator_dod"] = user.get("dod")
+    medical_entry["timestamp"] = firestore.SERVER_TIMESTAMP
+
+    for i in range(len(csv_data)):
+        user_entry["name"] = csv_data.iloc[i]["NAME"]
+        user_entry["email"] = csv_data.iloc[i]["EMAIL"]
+        user_entry["grade"] = csv_data.iloc[i]["GRADE"]
+        user_entry["rank"] = str(csv_data.iloc[i]["RANK"])
+        user_entry["dod"] = str(csv_data.iloc[i]["DOD"])
+        user_entry["branch"] = csv_data.iloc[i]["BRANCH"]
+        user_entry["address"] = csv_data.iloc[i]["ADDRESS"]
+        user_entry["officer"] = bool(csv_data.iloc[i]["OFFICER"])
+        user_entry["commander"] = bool(csv_data.iloc[i]["COMMANDER"])
+        user_entry["unit_name"] = csv_data.iloc[i]["UN"]
+
+        if str(csv_data.iloc[i]["PHONE (optional)"]):
+            user_entry["phone"] = str(
+                csv_data.iloc[i]["PHONE (optional)"]
+            ).replace("-", "")
+
+        medical_entry["upc"] = csv_data.iloc[i]["UPC"]
+        medical_entry["rcc"] = csv_data.iloc[i]["RCC"]
+        medical_entry["mpc"] = csv_data.iloc[i]["MPC"]
+        medical_entry["pdlc"] = csv_data.iloc[i]["PDLC"]
+        medical_entry["mrc"] = int(csv_data.iloc[i]["MRC"])
+        medical_entry["drc"] = int(csv_data.iloc[i]["DRC"])
+        medical_entry["dent_date"] = csv_data.iloc[i]["DENT_DATE"]
+        medical_entry["pha_date"] = csv_data.iloc[i]["PHA_DATE"]
+        medical_entry["flight_status"] = bool(csv_data.iloc[i]["FLIGHT_STATUS"])
+        medical_entry["mos"] = csv_data.iloc[i]["MOS"]
+        medical_entry["unit_name"] = user_entry["unit_name"]
+        medical_entry["dod"] = user_entry["dod"]
+
+        # create dental event
+        medical_event: dict = dict()
+        medical_event["author"] = uid
+        medical_event["confirmed_dod"] = [medical_entry.get("dod")]
+        medical_event["invitees_dod"] = []
+        medical_event["description"] = "Dental Readiness Examination Due"
+        medical_event["event_id"] = str(uuid4())
+        medical_event["organizer"] = user.get("name")
+        medical_event["period"] = False
+        medical_event["timestamp"] = medical_entry.get("timestamp")
+        medical_event["title"] = "Dental Exam Due"
+        medical_event["type"] = "Mandatory"
+        medical_event["starttime"] = medical_entry.get("dent_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        medical_event["endtime"] = medical_entry.get("dent_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        user_entry["uid"] = auth.create_user(
+            email=user_entry["email"], password="123456"
+        ).uid
+        db.collection("User").document(user_entry["uid"]).set(user_entry)
+        db.collection("Medical").document(medical_entry["dod"]).set(
+            medical_entry
+        )
+        db.collection("Scheduled-Events").document(
+            medical_event.get("event_id")
+        ).set(medical_event)
+
+        # create pha event
+        medical_event["title"] = "Physical Exam Due"
+        medical_event["description"] = "Physical Readiness Examination Due"
+        medical_event["event_id"] = str(uuid4())
+        medical_event["starttime"] = medical_entry.get("pha_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        medical_event["endtime"] = medical_entry.get("pha_date").strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        db.collection("Scheduled-Events").document(
+            medical_event.get("event_id")
+        ).set(medical_event)
+
+        # get to_user uid.
+        receiver_docs = (
+            db.collection("User")
+            .where("dod", "==", medical_entry.get("dod"))
+            .limit(1)
+            .stream()
+        )
+
+        receiver_list: list = []
+        for doc in receiver_docs:
+            receiver_list.append(doc.to_dict())
+
+        receiver: dict = receiver_list[0]
+
+        fcm_tokens: list = [receiver.get("FCMToken")]
+
+        add_medical_notifications(
+            medical_entry.get("dent_date"),
+            fcm_tokens,
+            {"title": "dent alert", "body": "dental appointment alert"},
+        )
+
+        add_medical_notifications(
+            medical_entry.get("pha_date"),
+            fcm_tokens,
+            {"title": "pha alert", "body": "pha appointment alert"},
+        )
+
+    return Response("Success upload new user")
 
 
 @users.put("/update_user")
