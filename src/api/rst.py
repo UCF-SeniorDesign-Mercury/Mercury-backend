@@ -21,7 +21,6 @@ from werkzeug.exceptions import (
 from io import BytesIO
 import pandas as pd
 import base64
-import openpyxl
 
 
 def time_conv(date_split, time_split):
