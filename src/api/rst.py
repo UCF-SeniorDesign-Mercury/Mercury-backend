@@ -116,7 +116,7 @@ def upload_rst_data() -> Response:
     # exceptions
     if "filename" in data and data.get("filename") == "":
         return BadRequest("Missing the filename")
-    if !(data["filename"].endswith(".xlsx")):
+    if (data["filename"].endswith(".xlsx") == 0):
         return UnsupportedMediaType("The endpoint only accept .xlsx file")
     if "xlsx_file" in data and data.get("xlsx_file") == "":
         return BadRequest("Missing the xlsx_file")
