@@ -25,7 +25,8 @@ import base64
 
 def time_conv(date_split, time_split):
     day = int(date_split[0])
-    month = date_split[1].month
+    datetime_object = datetime.strptime(date_split[1], "%b")
+    month_int = datetime_object.month
     year = "20" + date_split[2]
     time = int(time_split[0])
 
@@ -41,11 +42,11 @@ def time_conv(date_split, time_split):
     else:
         day = str(day)
 
-    if month < 10:
-        month = "0" + str(month)
+    if month_int < 10:
+        month = "0" + str(month_int)
 
     else:
-        month = str(month)
+        month = str(month_int)
 
     if time_split[1] == "AM" and time[:2] == "12":
         return year + "-" + month + "-" + day + "T00:" + time[:-2] + ":00.000Z"
