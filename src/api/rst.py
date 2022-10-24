@@ -136,9 +136,9 @@ def upload_rst_data() -> Response:
         entry["type"] = csv_data.iloc[i]["EVENT TYPE"]
         entry["Unit"] = csv_data.iloc[i]["UNIT"]
         entry["Location"] = csv_data.iloc[i]["LOCATION"]
-        entry["MUTA"] = csv_data[i]["MUTA"]
-        entry["Training Events"] = csv_data[i]["TRAINING EVENTS"]
-        entry["Remarks"] = csv_data[i]["REMARKS"]
+        entry["MUTA"] = csv_data.iloc[i]["MUTA"]
+        entry["Training Events"] = csv_data.iloc[i]["TRAINING EVENTS"]
+        entry["Remarks"] = csv_data.iloc[i]["REMARKS"]
 
         start_date_split = csv_data.iloc[i]["START DATE"].split()
         start_time_split = csv_data.iloc[i]["START TIME"].split()
