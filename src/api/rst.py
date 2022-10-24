@@ -119,10 +119,10 @@ def upload_rst_data() -> Response:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
-    xlsx_file: str = base64.b64decode(data.get("xlsx_file"))
-    xlsx_data = pd.read_excel(BytesIO(xlsx_file))
+    csv_file: str = base64.b64decode(data.get("csv_file"))
+    csv_data = pd.read_csv(BytesIO(csv_file))
 
-    for i in range(len(xlsx_data)):
+    for i in range(len(csv_data)):
         entry: dict = dict()
         entry["author"] = uid
         entry["confirmed_dod"] = []
@@ -133,17 +133,17 @@ def upload_rst_data() -> Response:
         entry["period"] = True
         entry["timestamp"] = firestore.SERVER_TIMESTAMP
         entry["title"] = "Battle Assembly"
-        entry["type"] = xlsx_data.iloc[i]["EVENT TYPE"]
-        entry["Unit"] = xlsx_data.iloc[i]["UNIT"]
-        entry["Location"] = xlsx_data.iloc[i]["LOCATION"]
-        entry["MUTA"] = xlsx_data[i]["MUTA"]
-        entry["Training Events"] = xlsx_data[i]["TRAINING EVENTS"]
-        entry["Remarks"] = xlsx_data[i]["REMARKS"]
+        entry["type"] = csv_data.iloc[i]["EVENT TYPE"]
+        entry["Unit"] = csv_data.iloc[i]["UNIT"]
+        entry["Location"] = csv_data.iloc[i]["LOCATION"]
+        entry["MUTA"] = csv_data[i]["MUTA"]
+        entry["Training Events"] = csv_data[i]["TRAINING EVENTS"]
+        entry["Remarks"] = csv_data[i]["REMARKS"]
 
-        start_date_split = xlsx_data.iloc[i]["START DATE"].split()
-        start_time_split = xlsx_data.iloc[i]["START TIME"].split()
-        end_date_split = xlsx_data.iloc[i]["END DATE"].split()
-        end_time_split = xlsx_data.iloc[i]["END TIME"].split()
+        start_date_split = csv_data.iloc[i]["START DATE"].split()
+        start_time_split = csv_data.iloc[i]["START TIME"].split()
+        end_date_split = csv_data.iloc[i]["END DATE"].split()
+        end_time_split = csv_data.iloc[i]["END TIME"].split()
 
         firebase_starttime = time_convert(start_date_split, start_time_split)
         firebase_endtime = time_convert(end_date_split, end_time_split)
