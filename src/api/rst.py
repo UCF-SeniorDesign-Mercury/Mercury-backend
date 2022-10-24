@@ -148,11 +148,12 @@ def upload_rst_data() -> Response:
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
         end_time_split = csv_data.iloc[i]["END TIME"].split()
         
-        if start_time_split == "TBD":
-            start_time_split = "12:00 AM"
+        if start_time_split[0] == "TBD":
+            start_time_split = ["12:00", "AM"]
             entry["description"] += " (Start time TBD)"
-        if end_time_split == "TBD":
-            end_time_split = "12:00 PM"
+        
+        if end_time_split[0] == "TBD":
+            end_time_split = ["12:00", "PM"]
             entry["description"] += " (End time TBD)"
 
         entry["starttime"] = time_conv(start_date_split, start_time_split)
