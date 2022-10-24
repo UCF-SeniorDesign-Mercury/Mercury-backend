@@ -142,11 +142,18 @@ def upload_rst_data() -> Response:
         entry["MUTA"] = csv_data.iloc[i]["MUTA"]
         entry["Training Events"] = csv_data.iloc[i]["TRAINING EVENTS"]
         entry["Remarks"] = csv_data.iloc[i]["REMARKS"]
-
+        
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
         start_time_split = csv_data.iloc[i]["START TIME"].split()
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
         end_time_split = csv_data.iloc[i]["END TIME"].split()
+        
+        if start_time_split == "TBD":
+            start_time_split = "12:00 AM"
+            entry["description"] += " (Start time TBD)"
+        if end_time_split == "TBD":
+            end_time_split = "12:00 PM"
+            entry["description"] += " (End time TBD)"
 
         entry["starttime"] = time_conv(start_date_split, start_time_split)
         entry["endtime"] = time_conv(end_date_split, end_time_split)
