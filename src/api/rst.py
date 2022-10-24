@@ -145,8 +145,8 @@ def upload_rst_data() -> Response:
         end_date_split = csv_data.iloc[i]["END DATE"].split()
         end_time_split = csv_data.iloc[i]["END TIME"].split()
 
-        firebase_starttime = time_convert(start_date_split, start_time_split)
-        firebase_endtime = time_convert(end_date_split, end_time_split)
+        firebase_starttime = time_conv(start_date_split, start_time_split)
+        firebase_endtime = time_conv(end_date_split, end_time_split)
 
         entry["starttime"] = firebase_starttime
         entry["endtime"] = firebase_endtime
