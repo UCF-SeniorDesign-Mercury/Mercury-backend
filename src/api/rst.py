@@ -28,14 +28,16 @@ def time_conv(date_split, time_split):
     datetime_object = datetime.strptime(date_split[1], "%b")
     month_int = datetime_object.month
     year = "20" + date_split[2]
-    time = int(time_split[0])
+    time = time_split[0].split(":")
+    hour = int(time[0])
+    minute = time[1]
 
-    if time < 10:
-        time = "0" + str(time)
-
+    if time_split[1] == "AM" and hour < 10:
+        hour = "0" + str(hour)
+    
     else:
-        time = str(time)
-
+        hour = str(hour)
+    
     if day < 10:
         day = "0" + str(day)
 
@@ -48,14 +50,14 @@ def time_conv(date_split, time_split):
     else:
         month = str(month_int)
 
-    if time_split[1] == "AM" and time[:2] == "12":
-        return year + "-" + month + "-" + day + "T00:" + time[:-2] + ":00.000Z"
+    if time_split[1] == "AM" and hour == "12":
+        return year + "-" + month + "-" + day + "T00:" + minute + ":00.000Z"
 
     elif time_split[1] == "AM":
-        return year + "-" + month + "-" + day + "T" + time + ":00.000Z"
+        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00.000Z"
 
-    elif time_split[1] == "PM" and time[:2] == "12":
-        return year + "-" + month + "-" + day + "T" + time + ":00.000Z"
+    elif time_split[1] == "PM" and hour == "12":
+        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00.000Z"
 
     else:
         return (
@@ -65,9 +67,9 @@ def time_conv(date_split, time_split):
             + "-"
             + day
             + "T"
-            + str(int(time[:2]) + 12)
+            + str(int(hour) + 12)
             + ":"
-            + time[:-2]
+            + minute
             + ":00.000Z"
         )
 
@@ -142,9 +144,9 @@ def upload_rst_data() -> Response:
         entry["Remarks"] = csv_data.iloc[i]["REMARKS"]
 
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
-        start_time_split = csv_data.iloc[i]["START TIME"].split(":")
+        start_time_split = csv_data.iloc[i]["START TIME"].split()
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
-        end_time_split = csv_data.iloc[i]["END TIME"].split(":")
+        end_time_split = csv_data.iloc[i]["END TIME"].split()
 
         firebase_starttime = time_conv(start_date_split, start_time_split)
         firebase_endtime = time_conv(end_date_split, end_time_split)
