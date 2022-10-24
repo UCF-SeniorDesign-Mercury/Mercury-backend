@@ -123,7 +123,7 @@ def upload_rst_data() -> Response:
     user: dict = user_ref.get().to_dict()
 
     csv_file: str = base64.b64decode(data.get("csv_file"))
-    csv_data = pd.read_csv(BytesIO(csv_file))
+    csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
 
     for i in range(len(csv_data)):
         entry: dict = dict()
@@ -148,11 +148,8 @@ def upload_rst_data() -> Response:
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
         end_time_split = csv_data.iloc[i]["END TIME"].split()
 
-        firebase_starttime = time_conv(start_date_split, start_time_split)
-        firebase_endtime = time_conv(end_date_split, end_time_split)
-
-        entry["starttime"] = firebase_starttime
-        entry["endtime"] = firebase_endtime
+        entry["starttime"] = time_conv(start_date_split, start_time_split)
+        entry["endtime"] = time_conv(end_date_split, end_time_split)
 
         db.collection("Scheduled-Events").document(entry.get("event_id")).set(
             entry
