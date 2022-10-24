@@ -140,10 +140,10 @@ def upload_rst_data() -> Response:
         entry["Training Events"] = csv_data.iloc[i]["TRAINING EVENTS"]
         entry["Remarks"] = csv_data.iloc[i]["REMARKS"]
 
-        start_date_split = csv_data.iloc[i]["START DATE"].split()
-        start_time_split = csv_data.iloc[i]["START TIME"].split()
-        end_date_split = csv_data.iloc[i]["END DATE"].split()
-        end_time_split = csv_data.iloc[i]["END TIME"].split()
+        start_date_split = csv_data.iloc[i]["START DATE"].split("-")
+        start_time_split = csv_data.iloc[i]["START TIME"].split(":")
+        end_date_split = csv_data.iloc[i]["END DATE"].split("-")
+        end_time_split = csv_data.iloc[i]["END TIME"].split(":")
 
         firebase_starttime = time_conv(start_date_split, start_time_split)
         firebase_endtime = time_conv(end_date_split, end_time_split)
