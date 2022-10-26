@@ -8,6 +8,7 @@
         delete_user()
         get_user()
 """
+from tabnanny import check
 from flask import Response, request
 from src.common.decorators import admin_only, check_token
 from werkzeug.exceptions import BadRequest, NotFound, UnsupportedMediaType
@@ -126,10 +127,6 @@ def upload_csv_users() -> Response:
     data: dict = request.get_json()
 
     # exceptions
-    if "filename" in data and data.get("filename") == "":
-        return BadRequest("Missing the filename")
-    if data["filename"][-4:] != ".csv":
-        return UnsupportedMediaType("The endpoint only accept .csv file")
     if "csv_file" in data and data.get("csv_file") == "":
         return BadRequest("Missing the csv_file")
 
@@ -203,16 +200,28 @@ def upload_csv_users() -> Response:
         medical_event["endtime"] = medical_entry.get("dent_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
-        user_entry["uid"] = auth.create_user(
-            email=user_entry["email"], password="123456"
-        ).uid
-        db.collection("User").document(user_entry["uid"]).set(user_entry)
+
+        try:
+            user_entry["uid"] = auth.get_user(user_entry["dod"]).uid
+            auth.update_user(
+                user_entry["uid"], email=user_entry["email"], password="123456"
+            )
+        except auth.UserNotFoundError:
+            user_entry["uid"] = auth.create_user(
+                uid=user_entry["dod"],
+                email=user_entry["email"],
+                password="123456",
+            ).uid
+
+        db.collection("User").document(user_entry["uid"]).set(
+            user_entry, merge=True
+        )
         db.collection("Medical").document(medical_entry["dod"]).set(
-            medical_entry
+            medical_entry, merge=True
         )
         db.collection("Scheduled-Events").document(
             medical_event.get("event_id")
-        ).set(medical_event)
+        ).set(medical_event, merge=True)
 
         # create pha event
         medical_event["title"] = "Physical Exam Due"
@@ -226,7 +235,7 @@ def upload_csv_users() -> Response:
         )
         db.collection("Scheduled-Events").document(
             medical_event.get("event_id")
-        ).set(medical_event)
+        ).set(medical_event, merge=True)
 
         # get to_user uid.
         receiver_docs = (
