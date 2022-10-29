@@ -126,8 +126,9 @@ def upload_rst_data() -> Response:
     unit = user.get("unit_name")
     invitees_ref = db.collection("User")
     query_for_invitees = invitees_ref.where("unit_name", "==", unit).get() 
-    print(invitee_dods)
-    invitee_dods = query_for_invitees["dod"]
+    
+    for doc in query_for_invitees:
+        print(f'{doc.id} => {doc.to_dict()}')
     
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
