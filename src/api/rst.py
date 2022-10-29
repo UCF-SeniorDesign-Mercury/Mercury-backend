@@ -151,6 +151,7 @@ def upload_rst_data() -> Response:
         entry["MUTA"] = csv_data.iloc[i]["MUTA"]
         entry["Training Events"] = csv_data.iloc[i]["TRAINING EVENTS"]
         entry["Remarks"] = csv_data.iloc[i]["REMARKS"]
+        entry["Remarks 2"] = csv_data.iloc[i]["REMARKS 2"]
         
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
         start_time_split = csv_data.iloc[i]["START TIME"].split()
