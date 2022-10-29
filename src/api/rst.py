@@ -125,10 +125,8 @@ def upload_rst_data() -> Response:
     # adding invitees with same unit name
     unit = user.get("unit_name")
     invitees_ref = db.collection("User")
-    query_for_invitees = invitees_ref.where("unit_name", "==", unit)
-    
-    for doc in query_for_invitees:
-        invitee_dods = query_for_invitees.get("dod")
+    query_for_invitees = invitees_ref.where("unit_name", "==", unit) 
+    invitee_dods = query_for_invitees.get("dod")
     
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
