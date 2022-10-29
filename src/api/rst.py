@@ -125,7 +125,7 @@ def upload_rst_data() -> Response:
     # adding invitees with same unit name
     unit = user.get("unit_name")
     invitees_ref = db.collection("User")
-    query_for_invitees = invitees_ref.where("unit_name", "==", unit).get()
+    query_for_invitees = invitees_ref.where("unit_name", "==", unit)
     
     for doc in query_for_invitees:
         invitee_dods = query_for_invitees.get("dod")
