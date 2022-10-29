@@ -121,13 +121,15 @@ def upload_rst_data() -> Response:
     if user_ref.get().exists == False:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
-
-      #untested query code for invitees
-#     unit = db.collection("User").document("unit").get()
-#     invitees_ref = db.collection("User")
-#     query_for_invitees = invitees_ref.where("unit", "==", unit).get()
-#     invitee_dods = query_for_invitees    
-     
+    
+    # adding invitees with same unit name
+    unit = user.get("unit_name")
+    invitees_ref = db.collection("User")
+    query_for_invitees = invitees_ref.where("unit_name", "==", unit).get()
+    
+    for doc in query_for_invitees:
+        invitee_dods = query_for_invitees.get("dod")
+    
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
 
@@ -137,7 +139,7 @@ def upload_rst_data() -> Response:
         entry["confirmed_dod"] = []
         entry["description"] = "Training Drills"
         entry["event_id"] = str(uuid4())
-        entry["invitees_dod"] = []
+        entry["invitees_dod"] = invitees_dods
         entry["organizer"] = user.get("name")
         entry["timestamp"] = firestore.SERVER_TIMESTAMP
         entry["title"] = "Battle Assembly"
