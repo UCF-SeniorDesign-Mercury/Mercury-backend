@@ -130,8 +130,9 @@ def upload_rst_data() -> Response:
     
     for doc in query_for_invitees:
         result_dict = doc.to_dict()
-        invitees_dods.append(result_dict["dod"])
-    
+         
+    invitees_dods.append(result_dict["dod"])
+  
     csv_file: str = base64.b64decode(data.get("csv_file"))
     csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
 
