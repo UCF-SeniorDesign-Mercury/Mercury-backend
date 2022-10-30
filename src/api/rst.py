@@ -199,6 +199,7 @@ def upload_rst_data() -> Response:
             previous_date = csv_data.iloc[i-1]["START DATE"].split("-")
         
         title = entry["title"]
+        period = entry["period"]
         replace_event(period, start_date_split, previous_date, unit, title)    
 
         db.collection("Scheduled-Events").document(entry.get("event_id")).set(
