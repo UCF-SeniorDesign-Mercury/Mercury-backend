@@ -73,7 +73,7 @@ def time_conv(date_split, time_split):
 def replace_event(period, start_date_split, previous_date, unit, title):
     date = start_date_split[1] + "/" + start_date_split[2]
     events_ref = db.collection("Scheduled-Events")
-    query_for_events = events.where("Unit", "==", unit).where("title", "==", title).where("date", "==", date).get()
+    query_for_events = events_ref.where("Unit", "==", unit).where("title", "==", title).where("date", "==", date).get()
     
     if query_for_events == None:
         return
