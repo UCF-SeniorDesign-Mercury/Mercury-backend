@@ -34,19 +34,16 @@ def time_conv(date_split, time_split):
 
     if time_split[1] == "AM" and hour < 10:
         hour = "0" + str(hour)
-    
     else:
         hour = str(hour)
     
     if day < 10:
         day = "0" + str(day)
-
     else:
         day = str(day)
 
     if month_int < 10:
         month = "0" + str(month_int)
-
     else:
         month = str(month_int)
 
@@ -71,8 +68,28 @@ def time_conv(date_split, time_split):
             + ":"
             + minute
             + ":00.000Z"
-        )
+        )    
 
+def replace_event(period, start_date_split, previous_date, unit, title):
+    date = start_date_split[1] + "/" + start_date_split[2]
+    events_ref = db.collection("Scheduled-Events")
+    query_for_events = events.where("Unit", "==", unit).where("title", "==", title).where("date", "==", date).get()
+    
+    if query_for_events == None:
+        return
+    
+    for doc in query_for_events:
+        result_dict = doc.to_dict()
+        
+        if period == True or start_date_split == previous_date:
+            events_ref.document(result_dict["event_id"]).delete()
+        
+        elif period == False and int(start_date_split[0]) - 1 != int(previous_date[0]):
+            events_ref.document(result_dict["event_id"]).delete()                                                         
+        
+        else:
+            return
+    
 
 rst: Blueprint = Blueprint("rst", __name__)
 
@@ -81,7 +98,7 @@ rst: Blueprint = Blueprint("rst", __name__)
 @check_token
 def upload_rst_data() -> Response:
     """
-    Upload a excel file that has RST Battle Assembly dates
+    Upload a csv file that has RST Battle Assembly dates
     ---
     tags:
         - RST
@@ -166,7 +183,8 @@ def upload_rst_data() -> Response:
         if end_time_split[0] == "TBD":
             end_time_split = ["12:00", "PM"]
             entry["description"] += " (End time TBD)"
-
+        
+        entry["date"] = start_date_split[1] + "/" + start_date_split[2]
         entry["starttime"] = time_conv(start_date_split, start_time_split)
         entry["endtime"] = time_conv(end_date_split, end_time_split)
         
@@ -174,6 +192,14 @@ def upload_rst_data() -> Response:
             entry["period"] = False
         else:
             entry["period"] = True
+            
+        if i == 0:
+            previous_date = start_date_split
+        else:
+            previous_date = csv_data.iloc[i-1]["START DATE"].split("-")
+        
+        title = entry["title"]
+        replace_event(period, start_date_split, previous_date, unit, title)    
 
         db.collection("Scheduled-Events").document(entry.get("event_id")).set(
             entry
