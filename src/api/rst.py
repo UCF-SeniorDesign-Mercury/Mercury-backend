@@ -150,7 +150,7 @@ def upload_rst_data() -> Response:
         entry["event_id"] = str(uuid4())
         entry["organizer"] = user.get("name")
         entry["timestamp"] = firestore.SERVER_TIMESTAMP
-        entry["title"] = "Battle Assembly"
+        entry["title"] = csv_data.iloc[i]["EVENT"]
         entry["type"] = csv_data.iloc[i]["EVENT TYPE"]
         entry["Unit"] = csv_data.iloc[i]["UNIT"]
         entry["Location"] = csv_data.iloc[i]["LOCATION"]
