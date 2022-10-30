@@ -48,13 +48,13 @@ def time_conv(date_split, time_split):
         month = str(month_int)
 
     if time_split[1] == "AM" and hour == "12":
-        return year + "-" + month + "-" + day + "T00:" + minute + ":00.000Z"
+        return year + "-" + month + "-" + day + "T00:" + minute + ":00Z"
 
     elif time_split[1] == "AM":
-        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00.000Z"
+        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
 
     elif time_split[1] == "PM" and hour == "12":
-        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00.000Z"
+        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
 
     else:
         return (
@@ -67,7 +67,7 @@ def time_conv(date_split, time_split):
             + str(int(hour) + 12)
             + ":"
             + minute
-            + ":00.000Z"
+            + ":00Z"
         )    
 
 def replace_event(period, start_date_split, previous_date, unit, title):
@@ -167,7 +167,8 @@ def upload_rst_data() -> Response:
     
         for doc in query_for_invitees:
             result_dict = doc.to_dict()
-            invitees_dods.append(result_dict["dod"])
+            if user.get("dod") != result_dict["dod"]:
+                invitees_dods.append(result_dict["dod"])
         
         entry["invitees_dod"] = invitees_dods
              
