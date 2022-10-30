@@ -188,7 +188,7 @@ def upload_rst_data() -> Response:
         entry["starttime"] = time_conv(start_date_split, start_time_split)
         entry["endtime"] = time_conv(end_date_split, end_time_split)
         
-        if entry["starttime"] == entry["endtime"]:
+        if start_date_split[0] == end_date_split[0]:
             entry["period"] = False
         else:
             entry["period"] = True
