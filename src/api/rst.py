@@ -145,7 +145,6 @@ def upload_rst_data() -> Response:
     for i in range(len(csv_data)):
         entry: dict = dict()
         entry["author"] = uid
-        entry["confirmed_dod"] = []
         entry["description"] = "Training Drills"
         entry["event_id"] = str(uuid4())
         entry["organizer"] = user.get("name")
@@ -171,6 +170,7 @@ def upload_rst_data() -> Response:
                 invitees_dods.append(result_dict["dod"])
         
         entry["invitees_dod"] = invitees_dods
+        entry["confirmed_dod"] = invitees_dod
              
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
         start_time_split = csv_data.iloc[i]["START TIME"].split()
