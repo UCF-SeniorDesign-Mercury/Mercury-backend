@@ -140,7 +140,7 @@ def upload_rst_data() -> Response:
     user: dict = user_ref.get().to_dict()
   
     csv_file: str = base64.b64decode(data.get("csv_file"))
-    csv_data = pd.read_csv(BytesIO(csv_file), dtype = str)
+    csv_data = pd.read_csv(BytesIO(csv_file), dtype = str, keep_default_na=False)
 
     for i in range(len(csv_data)):
         entry: dict = dict()
