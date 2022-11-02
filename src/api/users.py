@@ -183,12 +183,24 @@ def upload_csv_users() -> Response:
         medical_entry["dod"] = user_entry["dod"]
 
         # create dental event
+        dental_event = (
+            db.collection("Scheduled-Events")
+            .where("confirmed_dod", "array_contains", user_entry["dod"])
+            .where("description", "==", "Dental Readiness Examination Due")
+            .get()
+        )
+
+        if len(dental_event) > 0:
+            dental_id = dental_event[0].get("event_id")
+        else:
+            dental_id = str(uuid4())
+
         medical_event: dict = dict()
         medical_event["author"] = uid
         medical_event["confirmed_dod"] = [medical_entry.get("dod")]
         medical_event["invitees_dod"] = []
         medical_event["description"] = "Dental Readiness Examination Due"
-        medical_event["event_id"] = str(uuid4())
+        medical_event["event_id"] = dental_id
         medical_event["organizer"] = user.get("name")
         medical_event["period"] = False
         medical_event["timestamp"] = medical_entry.get("timestamp")
@@ -224,9 +236,25 @@ def upload_csv_users() -> Response:
         ).set(medical_event, merge=True)
 
         # create pha event
+        pa_event = (
+            db.collection("Scheduled-Events")
+            .where("confirmed_dod", "array_contains", user_entry["dod"])
+            .where(
+                "description",
+                "==",
+                "Physical Readiness Examination Due",
+            )
+            .get()
+        )
+
+        if len(pa_event) > 0:
+            pa_id = pa_event[0].get("event_id")
+        else:
+            pa_id = str(uuid4())
+
         medical_event["title"] = "Physical Exam Due"
         medical_event["description"] = "Physical Readiness Examination Due"
-        medical_event["event_id"] = str(uuid4())
+        medical_event["event_id"] = pa_id
         medical_event["starttime"] = medical_entry.get("pha_date").strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
