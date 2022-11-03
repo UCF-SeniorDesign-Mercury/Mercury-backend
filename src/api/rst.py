@@ -170,8 +170,8 @@ def upload_rst_data() -> Response:
                 invitees_dods.append(result_dict["dod"])
         
         entry["invitees_dod"] = invitees_dods
-        invitees_dod.append(user.get("dod"))
-        entry["confirmed_dod"] = invitees_dod
+        invitees_dods.append(user.get("dod"))
+        entry["confirmed_dod"] = invitees_dods
              
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
         start_time_split = csv_data.iloc[i]["START TIME"].split()
