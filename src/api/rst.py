@@ -36,7 +36,7 @@ def time_conv(date_split, time_split):
         hour = "0" + str(hour)
     else:
         hour = str(hour)
-    
+
     if day < 10:
         day = "0" + str(day)
     else:
@@ -51,10 +51,14 @@ def time_conv(date_split, time_split):
         return year + "-" + month + "-" + day + "T00:" + minute + ":00Z"
 
     elif time_split[1] == "AM":
-        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
+        return (
+            year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
+        )
 
     elif time_split[1] == "PM" and hour == "12":
-        return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
+        return (
+            year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
+        )
 
     else:
         return (
@@ -68,28 +72,36 @@ def time_conv(date_split, time_split):
             + ":"
             + minute
             + ":00Z"
-        )    
+        )
+
 
 def replace_event(period, start_date_split, previous_date, unit, title):
     date = start_date_split[1] + "/" + start_date_split[2]
     events_ref = db.collection("Scheduled-Events")
-    query_for_events = events_ref.where("unit", "==", unit).where("title", "==", title).where("date", "==", date).get()
-    
+    query_for_events = (
+        events_ref.where("unit", "==", unit)
+        .where("title", "==", title)
+        .where("date", "==", date)
+        .get()
+    )
+
     if query_for_events == None:
         return
-    
+
     for doc in query_for_events:
         result_dict = doc.to_dict()
-        
+
         if period == True or start_date_split == previous_date:
             events_ref.document(result_dict["event_id"]).delete()
-        
-        elif period == False and int(start_date_split[0]) - 1 != int(previous_date[0]):
-            events_ref.document(result_dict["event_id"]).delete()                                                         
-        
+
+        elif period == False and int(start_date_split[0]) - 1 != int(
+            previous_date[0]
+        ):
+            events_ref.document(result_dict["event_id"]).delete()
+
         else:
             return
-    
+
 
 rst: Blueprint = Blueprint("rst", __name__)
 
@@ -138,9 +150,14 @@ def upload_rst_data() -> Response:
     if user_ref.get().exists == False:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
-  
+
     csv_file: str = base64.b64decode(data.get("csv_file"))
-    csv_data = pd.read_csv(BytesIO(csv_file), dtype = str, keep_default_na=False)
+    time_zone = pd.read_csv(
+        BytesIO(csv_file), dtype=str, keep_default_na=False, nrows=1
+    )
+    csv_data = pd.read_csv(
+        BytesIO(csv_file), dtype=str, keep_default_na=False, skiprows=3
+    )
 
     for i in range(len(csv_data)):
         entry: dict = dict()
@@ -158,50 +175,50 @@ def upload_rst_data() -> Response:
         entry["training events"] = csv_data.iloc[i]["TRAINING EVENTS"]
         entry["remarks"] = csv_data.iloc[i]["REMARKS"]
         entry["remarks 2"] = csv_data.iloc[i]["REMARKS 2"]
-        
+
         # adding invitees with same unit name
         unit = entry["unit"]
         invitees_ref = db.collection("User")
-        query_for_invitees = invitees_ref.where("unit_name", "==", unit).get() 
+        query_for_invitees = invitees_ref.where("unit_name", "==", unit).get()
         invitees_dods = []
-    
+
         for doc in query_for_invitees:
             result_dict = doc.to_dict()
             if user.get("dod") != result_dict["dod"]:
                 invitees_dods.append(result_dict["dod"])
-        
+
         entry["invitees_dod"] = invitees_dods
-             
+
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
         start_time_split = csv_data.iloc[i]["START TIME"].split()
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
         end_time_split = csv_data.iloc[i]["END TIME"].split()
-        
+
         if start_time_split[0] == "TBD":
             start_time_split = ["12:00", "AM"]
             entry["description"] += " (Start time TBD)"
-        
+
         if end_time_split[0] == "TBD":
             end_time_split = ["12:00", "PM"]
             entry["description"] += " (End time TBD)"
-        
+
         entry["date"] = start_date_split[1] + "/" + start_date_split[2]
         entry["starttime"] = time_conv(start_date_split, start_time_split)
         entry["endtime"] = time_conv(end_date_split, end_time_split)
-        
+
         if start_date_split[0] == end_date_split[0]:
             entry["period"] = False
         else:
             entry["period"] = True
-            
+
         if i == 0:
             previous_date = start_date_split
         else:
-            previous_date = csv_data.iloc[i-1]["START DATE"].split("-")
-        
+            previous_date = csv_data.iloc[i - 1]["START DATE"].split("-")
+
         title = entry["title"]
         period = entry["period"]
-        replace_event(period, start_date_split, previous_date, unit, title)    
+        replace_event(period, start_date_split, previous_date, unit, title)
 
         db.collection("Scheduled-Events").document(entry.get("event_id")).set(
             entry
