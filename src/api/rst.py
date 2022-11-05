@@ -23,14 +23,35 @@ import pandas as pd
 import base64
 
 
-def time_conv(date_split, time_split):
+def time_conv(date_split, time_split, time_zone):
     day = int(date_split[0])
     datetime_object = datetime.strptime(date_split[1], "%b")
     month_int = datetime_object.month
     year = "20" + date_split[2]
     time = time_split[0].split(":")
-    hour = int(time[0])
     minute = time[1]
+    
+    if time_zone == "EDT":
+        time_diff = 4
+    elif time_zone == "CDT":
+        time_diff = 5
+    elif time_zone == "MDT":
+        time_diff = 6
+    elif time_zone == "PDT":
+        time_diff = 7
+    
+    hour = int(time[0]) + time_diff
+    
+    if hour >= 12:
+        
+        if hour > 12:
+            hour -= 12
+        
+        if time_split[1] == "AM":
+            time_split[1] = "PM"
+        else:
+            day += 1
+            time_split[1] = "AM"
 
     if time_split[1] == "AM" and hour < 10:
         hour = "0" + str(hour)
@@ -155,6 +176,8 @@ def upload_rst_data() -> Response:
     time_zone = pd.read_csv(
         BytesIO(csv_file), dtype=str, keep_default_na=False, nrows=1
     )
+    time_zone = time_zone.iloc[0, 0]
+    
     csv_data = pd.read_csv(
         BytesIO(csv_file), dtype=str, keep_default_na=False, skiprows=3
     )
@@ -203,8 +226,8 @@ def upload_rst_data() -> Response:
             entry["description"] += " (End time TBD)"
 
         entry["date"] = start_date_split[1] + "/" + start_date_split[2]
-        entry["starttime"] = time_conv(start_date_split, start_time_split)
-        entry["endtime"] = time_conv(end_date_split, end_time_split)
+        entry["starttime"] = time_conv(start_date_split, start_time_split, time_zone)
+        entry["endtime"] = time_conv(end_date_split, end_time_split, time_zone)
 
         if start_date_split[0] == end_date_split[0]:
             entry["period"] = False
