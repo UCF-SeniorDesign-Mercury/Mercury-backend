@@ -252,7 +252,7 @@ def delete_event(event_id: str) -> Response:
 
     if "timer_id" in event:
         cancel_scheduled_notification(event.get("timer_id"))
-        
+
     # delete the notifications about this event.
     notifications_docs = (
         db.collection("Notification").where("id", "==", event).stream()
@@ -340,7 +340,6 @@ def update_event() -> Response:
         event_ref.update({"description": data.get("description")})
     if "organizer" in data and data.get("organizer").strip():
         event_ref.update({"organizer": data.get("organizer")})
-
 
     if "new_invitees" in data and data.get("new_invitees"):
         event_ref.update({"invitees_dod": data.get("new_invitees")})
@@ -481,7 +480,7 @@ def get_events() -> Response:
         return NotFound("The user was not found")
     user: dict = user_ref.get().to_dict()
 
-    page_limit: int = request.args.get("page_limit", type=int, default=10)
+    page_limit: int = request.args.get("page_limit", type=int, default=100)
     target: int = request.args.get("target", type=int, default=1)
 
     if "type" in request.args:
