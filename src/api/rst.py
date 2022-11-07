@@ -195,9 +195,9 @@ def upload_rst_data() -> Response:
         entry["unit"] = csv_data.iloc[i]["UNIT"]
         entry["location"] = csv_data.iloc[i]["LOCATION"]
         entry["muta"] = csv_data.iloc[i]["MUTA"]
-        entry["training events"] = csv_data.iloc[i]["TRAINING EVENTS"]
+        entry["training_events"] = csv_data.iloc[i]["TRAINING EVENTS"]
         entry["remarks"] = csv_data.iloc[i]["REMARKS"]
-        entry["remarks 2"] = csv_data.iloc[i]["REMARKS 2"]
+        entry["remarks_2"] = csv_data.iloc[i]["REMARKS 2"]
 
         # adding invitees with same unit name
         unit = entry["unit"]
