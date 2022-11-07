@@ -44,12 +44,17 @@ def time_conv(date_split, time_split, time_zone):
     
     if hour >= 12:
         
-        if hour > 12:
+        if hour > 12 and time_split[1] == "AM":
             hour -= 12
-        
-        if time_split[1] == "AM":
             time_split[1] = "PM"
+        
+        elif hour == 12:
+            if time_split[1] == "AM":
+                time_split[1] = "PM"
+            else:
+                time_split[1] = "AM"
         else:
+            hour -= 12
             day += 1
             time_split[1] = "AM"
 
