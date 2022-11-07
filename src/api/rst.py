@@ -21,84 +21,32 @@ from werkzeug.exceptions import (
 from io import BytesIO
 import pandas as pd
 import base64
+from pytz import timezone
+import pytz
 
 
 def time_conv(date_split, time_split, time_zone):
-    day = int(date_split[0])
-    datetime_object = datetime.strptime(date_split[1], "%b")
-    month_int = datetime_object.month
-    year = "20" + date_split[2]
-    time = time_split[0].split(":")
-    minute = time[1]
+    hour_min = time_split[0].split(":")
+    time = date_split[0] + "/" + date_split[1] + "/" + date_split[2] + " " + hour_min[0] + ":" + hour_min[1] + " " + time_split[1]
+    format_data = "%d/%b/%y %I:%M %p"
+    tz = ""
     
     if time_zone == "EDT":
-        time_diff = 4
+        tz = timezone("US/Eastern")
     elif time_zone == "CDT":
-        time_diff = 5
+        tz = timezone("America/Chicago")
     elif time_zone == "MDT":
-        time_diff = 6
+        tz = timezone("America/Denver")
     elif time_zone == "PDT":
-        time_diff = 7
-    
-    hour = int(time[0]) + time_diff
-    
-    if hour >= 12:
-        
-        if hour > 12 and time_split[1] == "AM":
-            hour -= 12
-            time_split[1] = "PM"
-        
-        elif hour == 12:
-            if time_split[1] == "AM":
-                time_split[1] = "PM"
-            else:
-                time_split[1] = "AM"
-        else:
-            hour -= 12
-            day += 1
-            time_split[1] = "AM"
+        tz = timezone("America/Los_Angeles")
 
-    if time_split[1] == "AM" and hour < 10:
-        hour = "0" + str(hour)
-    else:
-        hour = str(hour)
+    local_time = datetime.strptime(time, format_data)
+    local_time = tz.localize(local_time)
 
-    if day < 10:
-        day = "0" + str(day)
-    else:
-        day = str(day)
+    utc_time = local_time.astimezone(pytz.utc)
+    final_time = utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    if month_int < 10:
-        month = "0" + str(month_int)
-    else:
-        month = str(month_int)
-
-    if time_split[1] == "AM" and hour == "12":
-        return year + "-" + month + "-" + day + "T00:" + minute + ":00Z"
-
-    elif time_split[1] == "AM":
-        return (
-            year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
-        )
-
-    elif time_split[1] == "PM" and hour == "12":
-        return (
-            year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":00Z"
-        )
-
-    else:
-        return (
-            year
-            + "-"
-            + month
-            + "-"
-            + day
-            + "T"
-            + str(int(hour) + 12)
-            + ":"
-            + minute
-            + ":00Z"
-        )
+    return final_time
 
 
 def replace_event(period, start_date_split, previous_date, unit, title):
