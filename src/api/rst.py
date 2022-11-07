@@ -5,7 +5,7 @@
     Functions:
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import uuid4
 from flask import Response, request, jsonify
 from src.api import Blueprint
@@ -43,7 +43,7 @@ def time_conv(date_split, time_split, time_zone):
     local_time = datetime.strptime(time, format_data)
     local_time = tz.localize(local_time)
 
-    utc_time = local_time.astimezone(pytz.utc)
+    utc_time = local_time.astimezone(pytz.utc) + timedelta(hours=12)
     final_time = utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     return final_time
