@@ -28,7 +28,7 @@ import pytz
 def time_conv(date_split, time_split, time_zone):
     hour = time_split[0:2]
     minute = time_split[2:4]
-    time = date_split[0] + "/" + date_split[1] + "/" + date_split[2] + " " + hour + ":" + minute + " " + time_split[1]
+    time = date_split[0] + "/" + date_split[1] + "/" + date_split[2] + " " + hour + ":" + minute
     format_data = "%d/%b/%y %H:%M"
     tz = ""
     
