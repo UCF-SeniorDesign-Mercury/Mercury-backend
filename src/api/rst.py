@@ -26,9 +26,10 @@ import pytz
 
 
 def time_conv(date_split, time_split, time_zone):
-    hour_min = time_split[0].split(":")
-    time = date_split[0] + "/" + date_split[1] + "/" + date_split[2] + " " + hour_min[0] + ":" + hour_min[1] + " " + time_split[1]
-    format_data = "%d/%b/%y %I:%M %p"
+    hour = time_split[0:2]
+    minute = time_split[2:4]
+    time = date_split[0] + "/" + date_split[1] + "/" + date_split[2] + " " + hour + ":" + minute + " " + time_split[1]
+    format_data = "%d/%b/%y %H:%M"
     tz = ""
     
     if time_zone == "EDT":
@@ -166,21 +167,21 @@ def upload_rst_data() -> Response:
         entry["invitees_dod"] = invitees_dods
 
         start_date_split = csv_data.iloc[i]["START DATE"].split("-")
-        start_time_split = csv_data.iloc[i]["START TIME"].split()
+        start_time = csv_data.iloc[i]["START TIME"]
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
-        end_time_split = csv_data.iloc[i]["END TIME"].split()
+        end_time = csv_data.iloc[i]["END TIME"]
 
-        if start_time_split[0] == "TBD":
-            start_time_split = ["12:00", "AM"]
+        if start_time == "TBD":
+            start_time = "0000"
             entry["description"] += " (Start time TBD)"
 
-        if end_time_split[0] == "TBD":
-            end_time_split = ["12:00", "PM"]
+        if end_time == "TBD":
+            end_time = "1200"
             entry["description"] += " (End time TBD)"
 
         entry["date"] = start_date_split[1] + "/" + start_date_split[2]
-        entry["starttime"] = time_conv(start_date_split, start_time_split, time_zone)
-        entry["endtime"] = time_conv(end_date_split, end_time_split, time_zone)
+        entry["starttime"] = time_conv(start_date_split, start_time, time_zone)
+        entry["endtime"] = time_conv(end_date_split, end_time, time_zone)
 
         if start_date_split[0] == end_date_split[0]:
             entry["period"] = False
