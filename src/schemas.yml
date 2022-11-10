@@ -187,6 +187,10 @@ File:
       type: string
       required: true
       example: 4F1JpM9bZYOdruyTheiNC1gGRWG2
+    reviewerName:
+      type: string
+      required: true
+      example: John Smith
     file:
       type: string
       format: byte
@@ -214,6 +218,9 @@ File:
       required: true
       description: submited = 1, pending = 2, resubmit = 3, approved = 4, rejected = 5
     recommender:
+      type: string
+      required: false
+    recommenderName:
       type: string
       required: false
     timestamp:
