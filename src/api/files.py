@@ -10,6 +10,7 @@
         upload_file()
         get_user_files()
         review_user_files()
+        get_approved_files()
         get_recommend_files()
         give_recommendation()
 """
@@ -575,6 +576,89 @@ def review_file():
         return NotFound("The author was not found")
 
     return Response("Status changed", 200)
+
+
+@files.get("/get_approved_files")
+@check_token
+def get_approved_files() -> Response:
+    """
+    Get all accepted files from Firebase Storage.
+    ---
+    tags:
+        - files
+    summary: Gets user files
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: status
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: filetype
+          schema:
+            type: string
+          required: false
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/UserFiles'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+    # the default page limits is 10
+    page_limit: int = 10
+
+    if "page_limit" in request.args:
+        page_limit = request.args.get("page_limit", default=10, type=int)
+
+    file_docs: list = []
+    filetype: str = request.args.get("filetype", type=str)
+    # both status and filetype search
+    if "filetype" in request.args:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("status", "==", 4)
+            .where("filetype", "==", filetype)
+            .limit(page_limit)
+            .stream()
+        )
+    else:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("status", "==", 4)
+            .limit(page_limit)
+            .stream()
+        )
+
+    files: list = []
+    for file in file_docs:
+        files.append(file.to_dict())
+
+    return jsonify(files), 200
 
 
 @files.get("/get_user_files")
