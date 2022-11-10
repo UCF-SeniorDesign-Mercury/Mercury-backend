@@ -170,6 +170,9 @@ def upload_rst_data() -> Response:
         start_time = csv_data.iloc[i]["START TIME"]
         end_date_split = csv_data.iloc[i]["END DATE"].split("-")
         end_time = csv_data.iloc[i]["END TIME"]
+        
+        if int(start_time) < 1000:
+            start_time = "0" + start_time
 
         if start_time == "TBD":
             start_time = "0000"
