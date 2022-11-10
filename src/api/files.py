@@ -118,11 +118,13 @@ def upload_file() -> Response:
     entry["filename"] = data.get("filename")
     entry["status"] = 1
     entry["reviewer"] = data.get("reviewer")
+    entry["reviewerName"] = data.get("reviewerName")
     entry["comment"] = ""
     if "recommender" in data and data.get("filetype") == "rst_request":
         if not data.get("recommender").strip():
             return BadRequest("Missing the recommender")
         entry["recommender"] = data.get("recommender")
+        entry["recommenderName"] = data.get("recommenderName")
         # notification send to recommender
         try:
             create_notification(

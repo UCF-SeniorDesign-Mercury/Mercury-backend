@@ -575,8 +575,6 @@ def get_events() -> Response:
     events: list = []
     for doc in docs:
         temp: dict = doc.to_dict()
-        del temp["confirmed_dod"]
-        del temp["invitees_dod"]
         events.append(temp)
 
     return jsonify(events), 200
@@ -641,10 +639,6 @@ def get_event(event_id: str) -> Response:
         return Unauthorized(
             "The user is not authorized to retrieve this content"
         )
-
-    if event.get("author") != uid:
-        del event["confirmed_dod"]
-        del event["invitees_dod"]
 
     return jsonify(event), 200
 
