@@ -44,7 +44,7 @@ def time_conv(date_split, time_split, time_zone):
     local_time = datetime.strptime(time, format_data)
     local_time = tz.localize(local_time)
 
-    utc_time = local_time.astimezone(pytz.utc) + timedelta(hours=12)
+    utc_time = local_time.astimezone(pytz.utc)
     final_time = utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     return final_time
