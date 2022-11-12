@@ -253,11 +253,11 @@ def check_role_permissions() -> Response:
         permissions_list = data[role]
 
         if requested_perm in permissions_list:
-            return 200
+            return Response(status=200)
         else:
-            return 401
+            return Response(status=401)
     except:
-        return 500
+        return Response(status=500)
 
 
 @roles.post("/assign_role")
