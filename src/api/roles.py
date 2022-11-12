@@ -234,7 +234,7 @@ def check_role_permissions() -> Response:
     user: dict = user_ref.get().to_dict()
 
     data: dict = request.get_json()
-    requested_perm = data.get("permission")
+    # requested_perm = data.get("permission")
 
     user_role: str = user.get("role")
     split_role = user_role.split("/")
@@ -252,10 +252,7 @@ def check_role_permissions() -> Response:
 
         permissions_list = data[role]
 
-        if requested_perm in permissions_list:
-            return Response(status=200)
-        else:
-            return Response(status=401)
+        return jsonify(permissions_list)
     except:
         return Response(status=500)
 
