@@ -197,7 +197,7 @@ def get_all_roles() -> Response:
 
 @roles.post("/check_role_permissions")
 @check_token
-def get_role_permissions() -> Response:
+def check_role_permissions() -> Response:
     """
     Retrieve the permissions for the given roles and checks if the requested
     permissions falls under the role.
