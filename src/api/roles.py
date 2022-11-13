@@ -195,7 +195,7 @@ def get_all_roles() -> Response:
 #         return Response(response="Unauthorized", status=401)
 
 
-@roles.post("/check_role_permissions")
+@roles.get("/check_role_permissions")
 @check_token
 def check_role_permissions() -> Response:
     """
