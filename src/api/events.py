@@ -416,6 +416,89 @@ def update_event() -> Response:
     return Response(response="Event updated", status=200)
 
 
+@events.get("/get_todays_events")
+@check_token
+def get_todays_events() -> Response:
+    """
+    Gets events for the current day.
+    ---
+    tags:
+        - event
+    summary: Gets events for the current day
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/Event'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        500:
+            description: Internal API Error
+    """
+    # Check user access levels
+    # Decode token to obtain user's firebase id
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # get user table
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
+    today = datetime.now().date()
+
+    docs1: list = (
+        db.collection("Scheduled-Events")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .where("invitees_dod", "array_contains", user.get("dod"))
+        .stream()
+    )
+    docs2: list = (
+        db.collection("Scheduled-Events")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .where("confirmed_dod", "array_contains", user.get("dod"))
+        .stream()
+    )
+    docs3: list = (
+        db.collection("Scheduled-Events")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .where("author", "==", uid)
+        .stream()
+    )
+    docs = chain(docs1, docs2, docs3)
+
+    events: list = []
+    for doc in docs:
+        temp: dict = doc.to_dict()
+        starttime_string = temp["starttime"].split("T")
+        endtime_string = temp["starttime"].split("T")
+        starttime = datetime.strptime(starttime_string[0], "%Y-%m-%d").date()
+        endtime = datetime.strptime(endtime_string[0], "%Y-%m-%d").date()
+
+        if (
+            starttime <= today
+            and endtime >= today
+            or starttime == today
+            or endtime == today
+        ):
+            events.append(temp)
+
+    return jsonify(events), 200
+
+
 @events.get("/get_events")
 @check_token
 def get_events() -> Response:
