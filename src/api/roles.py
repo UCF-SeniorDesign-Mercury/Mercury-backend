@@ -160,6 +160,55 @@ def get_all_roles() -> Response:
         return Response(response="Unauthorized", status=401)
 
 
+@roles.get("/get_users_with_permission")
+@check_token
+def get_users_with_permission() -> Response:
+    """
+    Retrieve a list of the roles that have the given permission.
+    ---
+    tags:
+        - role
+    summary: Check role permissions
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+              schema:
+                name: permissions
+                type: string
+            required: true
+    responses:
+        200:
+        500:
+    """
+    token: str = request.headers["Authorization"]
+    decoded_token = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # check if the user exists
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+
+    requested_perm = request.args.get("permission", type=str)
+
+    base_roles = db.collection("Roles").document("base_roles").get()
+    data: dict = base_roles.to_dict()
+
+    roleList = list()
+
+    for (role, permissions) in data.items():
+        if requested_perm in permissions:
+            roleList.append(role)
+
+    return jsonify(roleList)
+
+
 # @roles.get("/get_all_permissions")
 # @check_token
 # def get_all_permissions() -> Response:
