@@ -6,6 +6,8 @@
         grant_role()
         create_role()
         get_all_roles()
+        get_all_permissions()
+        get_role_permissions()
         assign_role()
         invite_role()
         revoke_role()
@@ -18,6 +20,8 @@ from src.api import Blueprint
 from src.common.decorators import check_token, admin_only
 from src.common.helpers import send_invite_email
 from src.common.database import db
+
+from werkzeug.exceptions import NotFound
 
 roles: Blueprint = Blueprint("roles", __name__)
 
@@ -52,7 +56,7 @@ def grant_role() -> Response:
     uid: str = decoded_token["uid"]
 
     # Reference to roles document
-    doc = db.collection(u"Roles").document(u"roleList").get()
+    doc = db.collection("Roles").document("roleList").get()
 
     # Get role map of predefined users to roles
     roles: dict = doc.to_dict()["role"]
@@ -62,9 +66,9 @@ def grant_role() -> Response:
         auth.set_custom_user_claims(uid, {role_to_assign: True})
 
         # Map this new entry to roles_to_user
-        doc_allRoles = db.collection(u"Roles").document(u"allRoles")
+        doc_allRoles = db.collection("Roles").document("allRoles")
         doc_allRoles.set(
-            {u"roles_to_user": {role_to_assign: firestore.ArrayUnion([email])}},
+            {"roles_to_user": {role_to_assign: firestore.ArrayUnion([email])}},
             merge=True,
         )
 
@@ -111,10 +115,10 @@ def create_role() -> Response:
         role: str = data["roleName"]
         level: str = data["level"]
 
-        doc_ref = db.collection(u"Roles").document(u"allRoles")
-        doc_ref.set({u"roles": {role: level}}, merge=True)
+        doc_ref = db.collection("Roles").document("allRoles")
+        doc_ref.set({"roles": {role: level}}, merge=True)
 
-        doc_ref.update({u"roleArray": firestore.ArrayUnion([role])})
+        doc_ref.update({"roleArray": firestore.ArrayUnion([role])})
 
         return Response(response="Successfully create a role", status=200)
     else:
@@ -125,11 +129,11 @@ def create_role() -> Response:
 @check_token
 def get_all_roles() -> Response:
     """
-    Retrieve all custom roles created by admins in /createRole to the app.
+    Retrieve all base roles from Firebase.
     ---
     tags:
         - role
-    summary: Gets all roles
+    summary: Gets all base roles
     parameters:
         - in: header
           name: Authorization
@@ -144,16 +148,113 @@ def get_all_roles() -> Response:
                         type: array
                         items:
                             type: string
-                        example:  ["nurse", "doctor", "frontdesk"]
+                        example:  ["ara", "basic", "bn_cdr"]
         401:
             description: Unauthorized.
     """
     try:
-        doc = db.collection(u"Roles").document(u"allRoles").get()
-        data = doc.to_dict()["roleArray"]
+        doc = db.collection("Roles").document("base_roles").get()
+        data = doc.to_dict()
         return jsonify(data), 200
     except:
         return Response(response="Unauthorized", status=401)
+
+
+# @roles.get("/get_all_permissions")
+# @check_token
+# def get_all_permissions() -> Response:
+#     """
+#     Retrieve all permissions.
+#     ---
+#     tags:
+#         - role
+#     summary: Gets all permissions
+#     parameters:
+#         - in: header
+#           name: Authorization
+#           schema:
+#             type: string
+#           required: true
+#     responses:
+#         200:
+#             content:
+#                 application/json:
+#                     schema:
+#                         type: array
+#                         items:
+#                             type: string
+#                         example:  ["nurse", "doctor", "frontdesk"]
+#         401:
+#             description: Unauthorized.
+#     """
+#     try:
+#         docs = db.collection("Permissions").stream()
+#         data = {doc.id: doc.to_dict() for doc in docs}
+#         return jsonify(data), 200
+#     except:
+#         return Response(response="Unauthorized", status=401)
+
+
+@roles.get("/check_role_permissions")
+@check_token
+def check_role_permissions() -> Response:
+    """
+    Retrieve the permissions for the given roles and checks if the requested
+    permissions falls under the role.
+    ---
+    tags:
+        - role
+    summary: Check role permissions
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    requestBody:
+        content:
+            application/json:
+              schema:
+                name: permissions
+                type: string
+            required: true
+    responses:
+        200:
+        500:
+        401:
+    """
+    token: str = request.headers["Authorization"]
+    decoded_token = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+
+    # check if the user exists
+    user_ref = db.collection("User").document(uid)
+    if user_ref.get().exists == False:
+        return NotFound("The user was not found")
+    user: dict = user_ref.get().to_dict()
+
+    data: dict = request.get_json()
+    # requested_perm = data.get("permission")
+
+    user_role: str = user.get("role")
+    split_role = user_role.split("/")
+
+    try:
+        if len(split_role) > 1:
+            role_doc = split_role[0]
+            role = split_role[1]
+        else:
+            role_doc = "base_roles"
+            role = split_role[0]
+
+        doc = db.collection("Roles").document(role_doc).get()
+        data = doc.to_dict()
+
+        permissions_list = data[role]
+
+        return jsonify(permissions_list)
+    except:
+        return Response(status=500)
 
 
 @roles.post("/assign_role")
@@ -190,7 +291,7 @@ def assign_role() -> Response:
 
     if decoded_token["admin"] is True:
 
-        doc_ref = db.collection(u"Roles").document(u"allRoles")
+        doc_ref = db.collection("Roles").document("allRoles")
         doc = doc_ref.get()
         roles_dict = doc.to_dict()["roles"]
 
@@ -223,7 +324,7 @@ def assign_role() -> Response:
 
                 # Map this new entry to roles_to_user
                 doc_ref.set(
-                    {u"roles_to_user": {role: firestore.ArrayUnion([email])}},
+                    {"roles_to_user": {role: firestore.ArrayUnion([email])}},
                     merge=True,
                 )
 
@@ -248,16 +349,14 @@ def invite_role() -> Response:
     event_id: str = data["event_id"]
 
     # Retrieve m"ap of roles to user from DB
-    role_docs = db.collection(u"Roles").document(u"allRoles").get()
+    role_docs = db.collection("Roles").document("allRoles").get()
     roles_to_user = role_docs.to_dict()["roles_to_user"]
 
     # Retrieve list of emails that have a specific from the map
     emails = roles_to_user[role]
 
     event_docs = (
-        db.collection(u"Scheduled-Events")
-        .where(u"id", u"==", event_id)
-        .stream()
+        db.collection("Scheduled-Events").where("id", "==", event_id).stream()
     )
     for doc in event_docs:
         doc_id = doc.id
@@ -289,7 +388,7 @@ def revoke_role() -> Response:
             all_keys = list(current_custom_claims.keys())
 
             # Get map of roles to level from DB
-            doc_ref = db.collection(u"Roles").document(u"allRoles")
+            doc_ref = db.collection("Roles").document("allRoles")
             doc = doc_ref.get()
             roles_map = doc.to_dict()["roles"]
 
@@ -313,7 +412,7 @@ def revoke_role() -> Response:
             # Map this new entry to roles_to_user
             doc_ref.set(
                 {
-                    u"roles_to_user": {
+                    "roles_to_user": {
                         role_to_remove: firestore.ArrayRemove([email])
                     }
                 },
