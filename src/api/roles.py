@@ -164,7 +164,7 @@ def get_all_roles() -> Response:
 @check_token
 def get_users_with_permission() -> Response:
     """
-    Retrieve a list of the roles that have the given permission.
+    Retrieve a list of the users that have the given permission.
     ---
     tags:
         - role
@@ -206,7 +206,15 @@ def get_users_with_permission() -> Response:
         if requested_perm in permissions:
             roleList.append(role)
 
-    return jsonify(roleList)
+    user_docs = db.collection("User").where("role", "in", roleList).stream()
+
+    users: list = []
+    for user in user_docs:
+        temp: dict = user.to_dict()
+        del temp["FCMTokens"]
+        users.append(temp)
+
+    return jsonify(users)
 
 
 # @roles.get("/get_all_permissions")
