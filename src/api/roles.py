@@ -8,6 +8,7 @@
         get_all_roles()
         get_all_permissions()
         get_role_permissions()
+        get_users_with_permission()
         assign_role()
         invite_role()
         revoke_role()
@@ -256,8 +257,7 @@ def get_users_with_permission() -> Response:
 @check_token
 def check_role_permissions() -> Response:
     """
-    Retrieve the permissions for the given roles and checks if the requested
-    permissions falls under the role.
+    Retrieve the permissions for the user's role.
     ---
     tags:
         - role
@@ -291,7 +291,6 @@ def check_role_permissions() -> Response:
     user: dict = user_ref.get().to_dict()
 
     data: dict = request.get_json()
-    # requested_perm = data.get("permission")
 
     user_role: str = user.get("role")
     split_role = user_role.split("/")

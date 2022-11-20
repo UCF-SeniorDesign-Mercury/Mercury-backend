@@ -157,6 +157,7 @@ def upload_csv_users() -> Response:
         user_entry["email"] = csv_data.iloc[i]["EMAIL"]
         user_entry["grade"] = csv_data.iloc[i]["GRADE"]
         user_entry["rank"] = str(csv_data.iloc[i]["RANK"])
+        user_entry["role"] = str(csv_data.iloc[i]["ROLE"]).lower()
         user_entry["dod"] = str(csv_data.iloc[i]["DOD"])
         user_entry["branch"] = csv_data.iloc[i]["BRANCH"]
         user_entry["address"] = csv_data.iloc[i]["ADDRESS"]
