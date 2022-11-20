@@ -137,7 +137,7 @@ def upload_csv_users() -> Response:
     user: dict = user_ref.get().to_dict()
 
     csv_file: str = base64.b64decode(data.get("csv_file"))
-    csv_data = pd.read_csv(BytesIO(csv_file))
+    csv_data = pd.read_csv(BytesIO(csv_file), dtype=str, keep_default_na=False)
 
     csv_data["DENT_DATE"] = pd.to_datetime(
         csv_data["DENT_DATE"], format="%Y%m%d"
