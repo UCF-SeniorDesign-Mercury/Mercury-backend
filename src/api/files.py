@@ -11,6 +11,7 @@
         get_user_files()
         review_user_files()
         get_approved_files()
+        get_all_files()
         get_recommend_files()
         give_recommendation()
 """
@@ -576,6 +577,70 @@ def review_file():
         return NotFound("The author was not found")
 
     return Response("Status changed", 200)
+
+
+@files.get("/get_all_files")
+@check_token
+def get_all_files() -> Response:
+    """
+    Get all files from Firebase Storage.
+    ---
+    tags:
+        - files
+    summary: Gets user files
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: status
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: filetype
+          schema:
+            type: string
+          required: false
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/UserFiles'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+
+    file_docs: list = []
+
+    file_docs = (
+        db.collection("Files")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+
+    files: list = []
+    for file in file_docs:
+        files.append(file.to_dict())
+
+    return jsonify(files), 200
 
 
 @files.get("/get_approved_files")
