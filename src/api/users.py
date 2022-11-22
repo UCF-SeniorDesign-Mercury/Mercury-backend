@@ -161,8 +161,7 @@ def upload_csv_users() -> Response:
         user_entry["dod"] = str(csv_data.iloc[i]["DOD"])
         user_entry["branch"] = csv_data.iloc[i]["BRANCH"]
         user_entry["address"] = csv_data.iloc[i]["ADDRESS"]
-        user_entry["officer"] = bool(csv_data.iloc[i]["OFFICER"])
-        user_entry["commander"] = bool(csv_data.iloc[i]["COMMANDER"])
+        user_entry["superior"] = bool(csv_data.iloc[i]["SUPERIOR (DOD)"])
         user_entry["unit_name"] = csv_data.iloc[i]["UN"]
 
         if str(csv_data.iloc[i]["PHONE (optional)"]):
