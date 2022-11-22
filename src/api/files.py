@@ -254,14 +254,15 @@ def get_file(file_id: str) -> Response:
         )
 
     # download the pdf file and add it to the file data
-    if "signature" not in user and user.get("role") != "ara":
-        return BadRequest("User need upload a signature")
-    signature_path: str = user.get("signature")
-    blob = bucket.blob(signature_path)
-    if not blob.exists():
-        return NotFound("The user's signature was not found.")
-    signature = blob.download_as_bytes()
-    res["signature"] = signature.decode("utf-8")
+    if user.get("role") != "ara":
+        if "signature" not in user:
+            return BadRequest("User need upload a signature")
+        signature_path: str = user.get("signature")
+        blob = bucket.blob(signature_path)
+        if not blob.exists():
+            return NotFound("The user's signature was not found.")
+        signature = blob.download_as_bytes()
+        res["signature"] = signature.decode("utf-8")
 
     return jsonify(res), 200
 
