@@ -212,7 +212,6 @@ def get_users_with_permission() -> Response:
     users: list = []
     for user in user_docs:
         temp: dict = user.to_dict()
-        del temp["FCMTokens"]
         users.append(temp)
 
     return jsonify(users)
