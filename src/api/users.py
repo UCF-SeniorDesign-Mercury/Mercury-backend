@@ -155,6 +155,7 @@ def upload_csv_users() -> Response:
     for i in range(len(csv_data)):
         user_entry["name"] = csv_data.iloc[i]["NAME"]
         user_entry["email"] = csv_data.iloc[i]["EMAIL"]
+        user_entry["password"] = csv_data.iloc[i]["PASSWORD"]
         user_entry["grade"] = csv_data.iloc[i]["GRADE"]
         user_entry["rank"] = str(csv_data.iloc[i]["RANK"])
         user_entry["role"] = str(csv_data.iloc[i]["ROLE"]).lower()
@@ -216,13 +217,15 @@ def upload_csv_users() -> Response:
         try:
             user_entry["uid"] = auth.get_user(user_entry["dod"]).uid
             auth.update_user(
-                user_entry["uid"], email=user_entry["email"], password="123456"
+                user_entry["uid"],
+                email=user_entry["email"],
+                password=user_entry["password"],
             )
         except auth.UserNotFoundError:
             user_entry["uid"] = auth.create_user(
                 uid=user_entry["dod"],
                 email=user_entry["email"],
-                password="123456",
+                password=user_entry["password"],
             ).uid
 
         db.collection("User").document(user_entry["uid"]).set(
