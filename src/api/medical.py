@@ -394,20 +394,40 @@ def get_aggregated_medical() -> Response:
         subordinateList[userDict['dod']] = userDict['name']
 
     # iterate over medicalDocs and find all the subordinate records
-    total = {'total_mrc': 0, 'total_drc': 0}
+    totalMrc = {'1': 0, '2': 0, '3': 0, '4': 0}
+    totalDrc = {'1': 0, '2': 0, '3': 0, '4': 0}
     data: list = list()
-    res = {"total": {}, "data": {}}
+    res = {"totalMrc": {}, "totalDrc": {}, "data": {}}
     for subordinateId in subordinateList:
         medDocs = db.collection('Medical').where('dod', '==', subordinateId).stream()
 
         # Tally the mrc and drc counts and also the total count for all subs
-        medicalRecord = {'mrc': 0, 'drc': 0}
+        medicalRecord = {'mrc': 1, 'drc': 1}
         for medDoc in medDocs:
             medDict = medDoc.to_dict()
-            medicalRecord['mrc'] += medDict['mrc']
-            medicalRecord['drc'] += medDict['drc']
-            total['total_mrc'] += medDict['mrc']
-            total['total_drc'] += medDict['drc']
+            if medDict['mrc'] == 1:
+                totalMrc['1'] += 1
+            elif medDict['mrc'] == 2:
+                medicalRecord['mrc'] = 2
+                totalMrc['2'] += 1
+            elif medDict['mrc'] == 3:
+                medicalRecord['mrc'] = 3
+                totalMrc['3'] += 1
+            elif medDict['mrc'] == 4:
+                medicalRecord['mrc'] = 4
+                totalMrc['4'] += 1
+            
+            if medDict['drc'] == 1:
+                totalDrc['1'] += 1
+            elif medDict['drc'] == 2:
+                medicalRecord['drc'] = 2
+                totalDrc['2'] += 1
+            elif medDict['drc'] == 3:
+                medicalRecord['drc'] = 3
+                totalDrc['3'] += 1
+            elif medDict['drc'] == 4:
+                medicalRecord['drc'] = 4
+                totalDrc['4'] += 1
 
         # Response dict for this subordinate
         data.append(
@@ -419,7 +439,8 @@ def get_aggregated_medical() -> Response:
                   )
     
     # Response dict for the totals under this leader
-    res['total'] = total
+    res['totalMrc'] = totalMrc
+    res['totalDrc'] = totalDrc
     res['data'] = data
 
     # Return the response packet
