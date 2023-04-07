@@ -52,8 +52,8 @@ def register_user ():
                     "rank": content["rank"],
                     "superior": content["superior"],
                     "unit_name": content["unit_name"],
-                    "uid": userRecord.uid,
-                    "dod": userRecord.uid
+                    "uid": content['uid'],
+                    "dod": content['dod']
                 }
         
         db.collection('User').document(userRecord.uid).set(entry)
