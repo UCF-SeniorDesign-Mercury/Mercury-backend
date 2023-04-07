@@ -5,6 +5,7 @@
     upload_medical_data()
     Functions:
 """
+import json
 from uuid import uuid4
 from flask import Response, request, jsonify
 from src.api import Blueprint
@@ -20,6 +21,7 @@ from werkzeug.exceptions import (
 from io import BytesIO
 import pandas as pd
 import base64
+import sys
 
 from src.common.notifications import add_medical_notifications
 
@@ -342,4 +344,83 @@ def get_medical_records() -> Response:
     for doc in docs:
         res.append(doc.to_dict())
 
+    return jsonify(res), 200
+
+
+@medical.get("/get_aggregated_medical")
+@check_token
+def get_aggregated_medical() -> Response:
+    """
+    Get medical records aggregated for a leader's viewing
+    from Firebase Storage.
+    ---
+    tags:
+        - medical
+    summary: Gets medical datas for all users under the leader
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: dict
+                        items:
+                            $ref: '#/components/schemas/MedicalAggregate'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        404:
+            description: NotFound
+        500:
+            description: Internal API Error
+    """
+    # Check Token and get UID from token
+    token: str = request.headers['Authorization']
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get('uid')
+
+    # iterate over userDocs and find each person who has uid as superior
+    subordinateList: dict = dict()
+    userDocs = db.collection('User').where('superior', '==', uid).stream()
+
+    for doc in userDocs:
+        userDict = doc.to_dict()
+        subordinateList[userDict['dod']] = userDict['name']
+
+    # iterate over medicalDocs and find all the subordinate records
+    total = {'total_mrc': 0, 'total_drc': 0}
+    data: list = list()
+    res = {"total": {}, "data": {}}
+    for subordinateId in subordinateList:
+        medDocs = db.collection('Medical').where('dod', '==', subordinateId).stream()
+
+        # Tally the mrc and drc counts and also the total count for all subs
+        medicalRecord = {'mrc': 0, 'drc': 0}
+        for medDoc in medDocs:
+            medDict = medDoc.to_dict()
+            medicalRecord['mrc'] += medDict['mrc']
+            medicalRecord['drc'] += medDict['drc']
+            total['total_mrc'] += medDict['mrc']
+            total['total_drc'] += medDict['drc']
+
+        # Response dict for this subordinate
+        data.append(
+                    {
+                        'dod': subordinateId, 
+                        'name': subordinateList[subordinateId], 
+                        'medRecord': medicalRecord
+                    }
+                  )
+    
+    # Response dict for the totals under this leader
+    res['total'] = total
+    res['data'] = data
+
+    # Return the response packet
     return jsonify(res), 200
