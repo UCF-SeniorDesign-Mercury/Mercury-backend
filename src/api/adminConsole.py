@@ -114,7 +114,7 @@ def search_user():
         for user in SearchByPhone_docs.stream():
             Users[user.id] = user.to_dict()
 
-        response = jsonify(Users)
+        response = jsonify(list(Users.values()))
         response.status_code = 200
 
         return response
