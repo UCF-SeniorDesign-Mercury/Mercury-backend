@@ -30,7 +30,7 @@ adminConsole: Blueprint = Blueprint("adminConsole", __name__)
 # FUNCTIONAL
 @adminConsole.post('/register_user')
 def register_user ():
-    
+
     try:
 
         content = request.json
@@ -96,14 +96,23 @@ def get_all_users():
 def search_user():
     try:
         content = request.json
-        query_str = content['query'].lower()
+        query = content['query']
 
-        user_docs = db.collection("User").where('dod', '>=', query_str).where('dod', '<=', query_str + u'\uf8ff').stream()
-        user_docs += db.collection("User").where('name', '>=', query_str).where('name', '<=', query_str + u'\uf8ff').stream()
-        user_docs += db.collection("User").where('email', '>=', query_str).where('email', '<=', query_str + u'\uf8ff').stream()
-        user_docs += db.collection("User").where('phone', '>=', query_str).where('phone', '<=', query_str + u'\uf8ff').stream()
+        searchByName_docs = db.collection("User").where('name', '>=', query).where('name', '<=', query + u'\uf8ff')
+        searchByEmail_docs = db.collection("User").where('email', '>=', query).where('email', '<=', query + u'\uf8ff')
+        SearchByPhone_docs = db.collection("User").where('phone', '>=', query).where('phone', '<=', query + u'\uf8ff')
 
-        Users = [doc.to_dict() for doc in user_docs]
+        Users = dict()
+
+
+        for user in searchByName_docs.stream():
+            Users[user.id] = user.to_dict()
+        
+        for user in searchByEmail_docs.stream():
+            Users[user.id] = user.to_dict()
+
+        for user in SearchByPhone_docs.stream():
+            Users[user.id] = user.to_dict()
 
         response = jsonify(Users)
         response.status_code = 200
