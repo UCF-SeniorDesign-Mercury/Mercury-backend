@@ -101,6 +101,7 @@ def search_user():
         searchByName_docs = db.collection("User").where('name', '>=', query).where('name', '<=', query + u'\uf8ff')
         searchByEmail_docs = db.collection("User").where('email', '>=', query).where('email', '<=', query + u'\uf8ff')
         SearchByPhone_docs = db.collection("User").where('phone', '>=', query).where('phone', '<=', query + u'\uf8ff')
+        searchByDOD_docs = db.collection("User").where('dod', '>=', query).where('dod', '<=', query + u'\uf8ff')
 
         Users = dict()
 
@@ -112,6 +113,9 @@ def search_user():
             Users[user.id] = user.to_dict()
 
         for user in SearchByPhone_docs.stream():
+            Users[user.id] = user.to_dict()
+
+        for user in searchByDOD_docs.stream():
             Users[user.id] = user.to_dict()
 
         response = jsonify(list(Users.values()))
