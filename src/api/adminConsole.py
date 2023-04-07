@@ -52,7 +52,7 @@ def register_user ():
                     "rank": content["rank"],
                     "superior": content["superior"],
                     "unit_name": content["unit_name"],
-                    "uid": content['uid'],
+                    "uid": userRecord.uid,
                     "dod": content['dod']
                 }
         
