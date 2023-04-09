@@ -612,3 +612,15 @@ DeleteMedical:
       items:
         type: string
       required: true
+
+MedicalAggregate:
+  type: object
+  properties:
+    data:
+      type: dict
+      items:
+        type: dict
+    totals:
+      type: dict
+      items:
+        type: dict

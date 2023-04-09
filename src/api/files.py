@@ -1156,3 +1156,88 @@ def give_recommendation():
         return NotFound("The reviewer was not found")
 
     return Response("Recommend post", 200)
+
+
+@files.get("/get_files_by_type")
+@check_token
+def get_files_by_type() -> Response:
+    """
+    Get the subordinates files by type from Firebase Storage.
+    ---
+    tags:
+        - files
+    summary: Gets subordinate files by type
+    parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: status
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: page_limit
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: filetype
+          schema:
+            type: string
+          required: false
+    responses:
+        200:
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/UserFiles'
+        400:
+            description: Bad request
+        401:
+            description: Unauthorized - the provided token is not valid
+        500:
+            description: Internal API Error
+    """
+    # check tokens and get uid from token
+    token: str = request.headers["Authorization"]
+    decoded_token: dict = auth.verify_id_token(token)
+    uid: str = decoded_token.get("uid")
+    # the default page limits is 10
+    page_limit: int = 10
+
+     # iterate over userDocs and find each person who has uid as superior
+    subordinateList: list = []
+    userDocs = db.collection('User').where('superior', '==', uid).stream()
+
+    for doc in userDocs:
+        userDict = doc.to_dict()
+        subordinateList.append(userDict['dod'])
+
+    if "page_limit" in request.args:
+        page_limit = request.args.get("page_limit", default=10, type=int)
+
+    file_docs: list = []
+    filetype: str = request.args.get("filetype", type=str)
+    files: list = []
+
+    for subordinateId in subordinateList:
+        file_docs = (
+            db.collection("Files")
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            .where("author", "==", subordinateId)
+            .where("filetype", "==", filetype)
+            .limit(page_limit)
+            .stream()
+        )
+
+        for file in file_docs:
+            files.append(file.to_dict())
+
+    
+    return jsonify(files), 200
+

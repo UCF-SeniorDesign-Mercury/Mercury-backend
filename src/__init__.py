@@ -11,6 +11,8 @@ from src.api.users import users
 from src.api.medical import medical
 from src.api.notifications import notifications
 from src.api.rst import rst
+from src.api.adminConsole import adminConsole
+from src.api.rosters import rosters
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
@@ -63,6 +65,8 @@ def create_app():
     app.register_blueprint(medical, url_prefix="/medical")
     app.register_blueprint(rst, url_prefix="/rst")
     app.register_blueprint(notifications, url_prefix="/notifications")
+    app.register_blueprint(adminConsole, url_prefix="/adminConsole")
+    app.register_blueprint(rosters, url_prefix="/rosters")
     return app
 
 
