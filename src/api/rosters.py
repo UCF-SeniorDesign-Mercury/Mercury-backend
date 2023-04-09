@@ -70,7 +70,7 @@ def show_rosters() -> Response:
 
         # Extract roster data from Firestore documents
         rosters = []
-        for roster in rosters_data:
+        for roster in roster_data:
             rosters.append(roster.to_dict())
 
         # Return roster data as JSON response
