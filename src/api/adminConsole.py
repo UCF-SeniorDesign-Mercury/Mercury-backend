@@ -53,7 +53,8 @@ def register_user ():
                     "superior": content["superior"],
                     "unit_name": content["unit_name"],
                     "uid": userRecord.uid,
-                    "dod": content['dod']
+                    "dod": content['dod'],
+                    "isAdmin": content['isAdmin']
                 }
         
         db.collection('User').document(userRecord.uid).set(entry)
