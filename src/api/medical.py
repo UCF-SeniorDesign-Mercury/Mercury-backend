@@ -402,9 +402,17 @@ def get_aggregated_medical() -> Response:
         medDocs = db.collection('Medical').where('dod', '==', subordinateId).stream()
 
         # Tally the mrc and drc counts and also the total count for all subs
-        medicalRecord = {'mrc': 1, 'drc': 1}
+        medicalRecord = {'mrc': 1, 'drc': 1, 'pha_date': 'NA', 'dent_date': 'NA'}
         for medDoc in medDocs:
             medDict = medDoc.to_dict()
+
+            try:
+                medicalRecord['pha_date'] = medDict['pha_date']
+                medicalRecord['dent_date'] = medDict['dent_date']
+            except:
+                medicalRecord['pha_date'] = 'NA'
+                medicalRecord['dent_date'] = 'NA'
+
             if medDict['mrc'] == 1:
                 totalMrc['1'] += 1
             elif medDict['mrc'] == 2:
