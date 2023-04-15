@@ -138,9 +138,17 @@ def update_user():
         user_doc = db.collection("User").document(content['uid'])
 
         if user_doc.get().exists:
+            
+            if content['email']:
+                auth.update_user(content['uid'], email = content['email'])
+
+            if content['password']:
+                auth.update_user(content['uid'], password = content['password'])
+
             user_doc.update(content)
             response = jsonify({"message": "User successfully updated"})
             response.status_code = 200
+            
         else:
             response = jsonify({"message": "User does not exist"})
             response.status_code = 404
